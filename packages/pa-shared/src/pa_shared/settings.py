@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     internal_api_token: SecretStr = SecretStr("dev-internal-token-change-me")
     bocha_api_key: SecretStr | None = None
     tavily_api_key: SecretStr | None = None
+    fcm_enabled: bool = False
+    fcm_service_account_file: str | None = None
 
     user_jwt_secret: str = "dev-user-secret-change-me-at-least-32b"
     phone_hash_secret: SecretStr = SecretStr("dev-phone-hmac-secret-change-me")

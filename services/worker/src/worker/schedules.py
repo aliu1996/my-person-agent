@@ -256,10 +256,11 @@ async def record_outcome(ctx: dict, id: int, job: dict, status: str, charge: int
             "failed": "生成失败",
             "skipped_no_points": "积分不足，已跳过",
         }
-        await db.execute(
+        notice_id = await db.scalar(
             text("""
             INSERT INTO user_notification (user_id, type, title, body, target_url)
             VALUES (:user, :type, :title, :body, :url)
+            RETURNING id
         """),
             {
                 "user": task.user_id,
@@ -271,3 +272,9 @@ async def record_outcome(ctx: dict, id: int, job: dict, status: str, charge: int
                 "url": f"/chat/{task.target_session_id}" if task.target_session_id else None,
             },
         )
+        if get_settings().fcm_enabled:
+            await db.execute(text("""
+                INSERT INTO push_delivery (notification_id, token_hash)
+                SELECT :notice, token_hash FROM push_device WHERE user_id = :user
+                ON CONFLICT DO NOTHING
+            """), {"notice": notice_id, "user": task.user_id})

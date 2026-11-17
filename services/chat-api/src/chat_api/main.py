@@ -5,7 +5,7 @@ from pa_shared.telemetry import instrument
 from . import agent, turns
 from .admin import auth, catalog, moderation, share_reviews, system, users
 from .client import auth as user_auth
-from .client import files, library, memory, profile, schedules, sessions, shares
+from .client import files, library, memory, profile, push, schedules, sessions, shares
 
 app = FastAPI(title="chat-api", version="0.1.0")
 instrument(app, "chat-api")
@@ -30,6 +30,7 @@ for router in (
     library.router,
     schedules.router,
     memory.router,
+    push.router,
 ):
     app.include_router(router, prefix="/api")
 
