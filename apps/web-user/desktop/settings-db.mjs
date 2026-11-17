@@ -2,6 +2,12 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
+const FOLDER_TABLE = `
+  CREATE TABLE folder_whitelist (
+    id TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE
+  ) STRICT;
+`
+
 const SCHEMA = `
   CREATE TABLE providers (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, base_url TEXT NOT NULL, encrypted_key TEXT
@@ -15,7 +21,8 @@ const SCHEMA = `
     model_id TEXT REFERENCES models(id) ON DELETE SET NULL
   ) STRICT;
   INSERT INTO selection (singleton) VALUES (1);
-  PRAGMA user_version = 1;
+  ${FOLDER_TABLE}
+  PRAGMA user_version = 2;
 `
 
 function transaction(db, run) {
@@ -57,7 +64,14 @@ export async function openSettingsDatabase(file, parseLegacy) {
         db.prepare('UPDATE selection SET model_id = ? WHERE singleton = 1').run(legacy.selectedModelId)
       })
     }
-    if (version() !== 1) throw new Error('Unsupported settings database version')
+    if (version() === 1) {
+      transaction(db, () => {
+        if (version() !== 1) return
+        db.exec(FOLDER_TABLE)
+        db.exec('PRAGMA user_version = 2')
+      })
+    }
+    if (version() !== 2) throw new Error('Unsupported settings database version')
     return db
   } catch (error) {
     db.close()
@@ -75,6 +89,18 @@ export function readSettings(db) {
     `).all(),
     selectedModelId: db.prepare('SELECT model_id FROM selection WHERE singleton = 1').get().model_id,
   }
+}
+
+export function listFolders(db) {
+  return db.prepare('SELECT id, path FROM folder_whitelist ORDER BY rowid').all()
+}
+
+export function insertFolder(db, id, path) {
+  db.prepare('INSERT INTO folder_whitelist (id, path) VALUES (?, ?)').run(id, path)
+}
+
+export function deleteFolder(db, id) {
+  return db.prepare('DELETE FROM folder_whitelist WHERE id = ?').run(id).changes
 }
 
 export function changeSettings(db, mutate) {

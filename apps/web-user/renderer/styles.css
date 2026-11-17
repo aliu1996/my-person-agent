@@ -122,3 +122,10 @@ dialog::backdrop { background: #000a; }
   .model-inputs { grid-template-columns: 1fr; gap: 0; }
   .model-row { flex-wrap: wrap; }
 }
+
+.settings-tabs { display: flex; gap: 6px; margin-left: auto; margin-right: 4px; }
+.settings-tab { border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); min-height: 32px; padding: 4px 10px; font-weight: 580; }
+.settings-tab:hover { background: var(--hover); color: var(--text); }
+.settings-tab[aria-selected="true"] { background: var(--raised); border-color: var(--line); color: var(--text); }
+.settings-folders { min-height: 0; overflow: auto; padding: 23px 25px 22px; }
+.folder-path { font-family: ui-monospace, Consolas, "Microsoft YaHei UI", monospace; font-size: 12px; overflow-wrap: anywhere; }

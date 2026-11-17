@@ -49,9 +49,13 @@
     <div class="dialog-shell">
       <header class="dialog-header">
         <div class="breadcrumb"><span>设置</span><span aria-hidden="true">/</span><h2 id="settingsTitle">模型</h2></div>
+        <div class="settings-tabs" role="tablist" aria-label="设置分类">
+          <button type="button" id="modelsTab" class="settings-tab" role="tab" aria-selected="true">模型</button>
+          <button type="button" id="foldersTab" class="settings-tab" role="tab" aria-selected="false">本机目录</button>
+        </div>
         <button class="button-icon" id="closeSettings" type="button" aria-label="关闭设置">×</button>
       </header>
-      <div class="settings-content">
+      <div class="settings-content" id="settingsModelsView">
         <aside class="providers" aria-label="供应商">
           <h3>供应商</h3>
           <ul id="providerList" class="provider-list"></ul>
@@ -117,6 +121,18 @@
             <p class="status" role="status" id="modelStatus"></p>
           </section>
         </div>
+      </div>
+      <div class="settings-folders" id="settingsFoldersView" hidden>
+        <section class="settings-section" aria-labelledby="foldersTitle">
+          <h3 id="foldersTitle">本机目录白名单</h3>
+          <p class="section-desc">仅允许向已授权的本地目录写入文件，每次写入都会再次确认。</p>
+          <ul id="folderList" class="configured-models"></ul>
+          <p id="folderEmpty" class="section-desc">还没有授权目录。添加后，桌面端才能向这些文件夹写入文件。</p>
+          <div class="form-actions">
+            <button class="primary" id="addFolder" type="button">添加目录</button>
+          </div>
+          <p class="status" role="status" id="folderStatus"></p>
+        </section>
       </div>
     </div>
   </dialog>

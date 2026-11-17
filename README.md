@@ -118,7 +118,10 @@ npm --prefix services/dsh-bridge start
 ## Phase 5 客户端与监控
 
 - 桌面用户从「平台对话」登录平台。开发 Web 端或管理台时，在对应目录 `apps/web-user` 或 `apps/web-admin` 执行 `npm install` 和 `npm run dev`，默认端口分别为 5173 和 5174。
-- 手机端入口在 `apps/mobile/lib`。在安装 Flutter 后，从 `apps/mobile` 执行 `flutter create --platforms=android,ios --project-name pa_mobile .` 生成平台壳，再用 `flutter pub get` 和 `flutter run` 启动。用 `--dart-define=CHAT_API_URL=...` 与 `--dart-define=CHAT_STREAM_URL=...` 设置设备可访问地址。按平台声明麦克风、语音识别和相机权限，真机使用 HTTPS 网关。
+- 桌面端用 `Alt+Space` 呼出划词助手迷你浮窗：会尽量读取当前选中的文本，结合补充问题发送给已选择的本机模型，并可用「在平台中打开」进入平台对话。在设置的「本机目录」中通过系统目录选择器授权本地文件夹；通过 IPC 写入这些目录中的文件前，会弹出原生确认框。
+- 手机端入口在 `apps/mobile`。Android 工程壳已包含在仓库中，需先安装 Flutter SDK，然后在该目录执行 `flutter pub get` 和 `flutter run`。用 `--dart-define=CHAT_API_URL=...` 与 `--dart-define=CHAT_STREAM_URL=...` 设置设备可访问地址。麦克风、语音识别和相机权限已在 Android 清单中声明；真机请使用 HTTPS 网关。
+- 仓库未包含 iOS Xcode 工程（需在 macOS 上用 Xcode 构建）。安装 Flutter 后，在 `apps/mobile` 执行 `flutter create --platforms=ios --project-name pa_mobile .` 生成 iOS 壳，并避免覆盖已有 `lib/` 源码。随后在 `ios/Runner/Info.plist` 中声明 `NSMicrophoneUsageDescription`、`NSSpeechRecognitionUsageDescription` 和 `NSCameraUsageDescription`。
+- 移动端推送走已有的 FCM 后端。登录后会注册设备令牌，退出登录时注销；点击带会话信息的通知会打开对应会话。应用在缺少 Firebase 配置时仍可编译运行，只是推送不可用。启用推送时请把 Firebase 控制台下载的 `google-services.json` 放到 `apps/mobile/android/app/`，iOS 则把 `GoogleService-Info.plist` 放到 `ios/Runner/`。这两份文件已加入 `.gitignore`，不要提交。无需额外 `--dart-define`；配置文件就位后，下次构建会自动接入 Google Services 插件。
 - 监控配置位于 `deploy/observability`。用 `docker compose -f deploy/observability/compose.yml up -d` 启动 Grafana、Prometheus、Loki 和 OTLP 接收器。Prometheus 从宿主机抓取 8100–8102 的 `/metrics`。Loki 读取仓库的 `logs/*.log`。配置 `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces` 可导出请求追踪。设置 Langfuse 地址与凭据后，上报采样后的回合元数据。
 - 仅在隔离压测环境运行 `k6 run deploy/observability/stream-load.js`。通过 `PA_LOAD_URL` 指定 URL，通过 `PA_LOAD_USERS` 指向测试账户 JSON，列表项含 `sessionId` 和 `jwt`，每个虚拟用户使用独立会话。默认包含 4,250 个快路径和 750 个 Agent 虚拟用户，可用 `PA_FAST_VUS` 与 `PA_AGENT_VUS` 调整。
 

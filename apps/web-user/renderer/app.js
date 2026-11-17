@@ -3,6 +3,8 @@
 
   const $ = (id) => document.getElementById(id)
   const bridge = window.desktopModels
+  const foldersBridge = window.desktopFolders
+  let folders = []
   let settings = { providers: [], models: [], selectedModelId: null }
   let providerId = null
   let editingModelId = null
@@ -22,6 +24,54 @@
     const result = await bridge[method](input)
     if (!result.ok) throw new Error(result.error)
     return result.data
+  }
+
+  async function invokeFolders(method, input) {
+    if (!foldersBridge) throw new Error('请在 Electron 桌面端打开此页面')
+    const result = await foldersBridge[method](input)
+    if (!result.ok) throw new Error(result.error)
+    return result.data
+  }
+
+  function showSettingsTab(tab) {
+    const foldersView = tab === 'folders'
+    $('modelsTab').setAttribute('aria-selected', String(!foldersView))
+    $('foldersTab').setAttribute('aria-selected', String(foldersView))
+    $('settingsModelsView').hidden = foldersView
+    $('settingsFoldersView').hidden = !foldersView
+    $('settingsTitle').textContent = foldersView ? '本机目录' : '模型'
+    if (foldersView) loadFolders()
+  }
+
+  function renderFolders() {
+    $('folderEmpty').hidden = folders.length > 0
+    $('folderList').replaceChildren(...folders.map((folder) => {
+      const item = element('li', undefined, 'model-row')
+      const details = element('div', undefined, 'model-info')
+      details.append(element('span', folder.path, 'folder-path'))
+      const remove = button('移除', 'text-button danger', () => {
+        withSettings('folderStatus', async () => {
+          folders = (await invokeFolders('remove', folder.id)).folders
+          renderFolders()
+          status('folderStatus', '目录已移除', 'success')
+        })
+      })
+      item.append(details, remove)
+      return item
+    }))
+  }
+
+  async function loadFolders() {
+    if (!foldersBridge) {
+      status('folderStatus', '请在 Electron 桌面端打开此页面', 'error')
+      return
+    }
+    try {
+      folders = await invokeFolders('list')
+      renderFolders()
+    } catch (error) {
+      status('folderStatus', error.message, 'error')
+    }
   }
 
   function threadKey(model) {
@@ -173,6 +223,9 @@
     $('fetchModels').disabled = settingsBusy || !bridge
     $('addProvider').disabled = settingsBusy || !bridge
     $('closeSettings').disabled = settingsBusy
+    $('addFolder').disabled = settingsBusy || !foldersBridge
+    $('modelsTab').disabled = settingsBusy
+    $('foldersTab').disabled = settingsBusy
     renderProviderList()
     renderModelList()
   }
@@ -195,6 +248,7 @@
   function openSettings() {
     if (sending || $('settingsDialog').open) return
     showProvider(currentProvider()?.id ?? settings.providers[0]?.id ?? null)
+    showSettingsTab('models')
     controls()
     $('settingsDialog').showModal()
     if (!bridge) status('providerStatus', '请在 Electron 桌面端打开此页面', 'error')

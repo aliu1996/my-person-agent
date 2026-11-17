@@ -56,6 +56,23 @@ class Service {
     refresh = credentials['refreshToken'] as String;
   }
 
+  void clearTokens() {
+    token = null;
+    refresh = null;
+  }
+
+  Future<dynamic> registerDevice(String deviceToken, String platform, {String? previousToken}) {
+    return request('/push/device', method: 'PUT', body: {
+      'token': deviceToken,
+      'platform': platform,
+      if (previousToken != null && previousToken != deviceToken) 'previousToken': previousToken,
+    });
+  }
+
+  Future<dynamic> unregisterDevice(String deviceToken) {
+    return request('/push/device', method: 'DELETE', body: {'token': deviceToken});
+  }
+
   Future<int> upload(XFile file, int session) async {
     final bytes = await file.readAsBytes();
     final mime = file.mimeType ?? (file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
@@ -121,4 +138,19 @@ class Service {
     }
     throw ApiIssue('连接中断，请重新打开会话查看结果', 503);
   }
+}
+
+int? sessionIdFromPayload(Map<String, dynamic> data) {
+  for (final key in ['sessionId', 'session_id']) {
+    final value = data[key];
+    if (value != null) {
+      final id = int.tryParse(value.toString());
+      if (id != null) return id;
+    }
+  }
+  for (final key in ['targetUrl', 'target_url', 'url']) {
+    final match = RegExp(r'/chat/(\d+)').firstMatch(data[key]?.toString() ?? '');
+    if (match != null) return int.parse(match.group(1)!);
+  }
+  return null;
 }

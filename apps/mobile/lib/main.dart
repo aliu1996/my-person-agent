@@ -7,12 +7,17 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
+import 'push.dart';
 
-void main() => runApp(MaterialApp(
-  title: '24小时个人助理',
-  theme: ThemeData(colorSchemeSeed: const Color(0xff5b8cff), brightness: Brightness.dark),
-  home: const Assistant(),
-));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await PushClient.bootstrap();
+  runApp(MaterialApp(
+    title: '24小时个人助理',
+    theme: ThemeData(colorSchemeSeed: const Color(0xff5b8cff), brightness: Brightness.dark),
+    home: const Assistant(),
+  ));
+}
 
 class Assistant extends StatefulWidget {
   const Assistant({super.key});
@@ -22,6 +27,7 @@ class Assistant extends StatefulWidget {
 
 class _AssistantState extends State<Assistant> {
   final service = Service();
+  late final PushClient push = PushClient(service);
   final phone = TextEditingController();
   final otp = TextEditingController();
   final input = TextEditingController();
@@ -52,6 +58,7 @@ class _AssistantState extends State<Assistant> {
     service.saveTokens(data);
     final value = await service.request('/user/profile') as JsonMap;
     if (mounted) setState(() => profile = value);
+    await push.register();
   });
 
   Future<void> send() async {
@@ -94,6 +101,37 @@ class _AssistantState extends State<Assistant> {
     });
     if (mounted) setState(() { sending = false; turn = null; });
   }
+
+  @override
+  void initState() {
+    super.initState();
+    push.onOpenSession = (id) { unawaited(openSession(id)); };
+    unawaited(push.prepare());
+  }
+
+  Future<void> openSession(int id) => task(() async {
+    if (sending) return;
+    final history = await service.request('/chat/session/$id/messages') as JsonMap;
+    if (mounted) setState(() {
+      session = id;
+      messages..clear()..addAll((history['items'] as List).cast<JsonMap>());
+      tab = 0;
+    });
+  });
+
+  Future<void> logout() => task(() async {
+    await push.unregister();
+    service.clearTokens();
+    if (mounted) setState(() {
+      profile = null;
+      session = null;
+      messages.clear();
+      rows = [];
+      tab = 0;
+      attachment = null;
+      notice = '';
+    });
+  });
 
   Future<void> switchTab(int index) => task(() async {
     setState(() { tab = index; rows = []; });
@@ -209,12 +247,10 @@ class _AssistantState extends State<Assistant> {
         1 || 2 => ListView(children: rows.map((row) => ListTile(
           title: Text(row['title'].toString()),
           subtitle: Text((row['body'] ?? row['mimeType'] ?? '').toString()),
-          onTap: tab == 1 ? () => openAsset(row['id'].toString()) : () => task(() async {
-            final id = RegExp(r'^/chat/(\d+)$').firstMatch(row['targetUrl']?.toString() ?? '')?.group(1);
-            if (id == null || sending) return;
-            final history = await service.request('/chat/session/$id/messages') as JsonMap;
-            if (mounted) setState(() { session = int.parse(id); messages..clear()..addAll((history['items'] as List).cast<JsonMap>()); tab = 0; });
-          }),
+          onTap: tab == 1 ? () => openAsset(row['id'].toString()) : () {
+            final id = sessionIdFromPayload({'targetUrl': row['targetUrl']});
+            if (id != null) unawaited(openSession(id));
+          },
         )).toList()),
         _ => ListView(children: [
           ListTile(title: Text((profile?['nickname'] ?? profile?['phone'] ?? '').toString()),
@@ -224,6 +260,7 @@ class _AssistantState extends State<Assistant> {
               final data = await service.request('/user/profile', method: 'PUT', body: {'memoryEnabled': value}) as JsonMap;
               if (mounted) setState(() => profile = data);
             })),
+          ListTile(title: const Text('退出登录'), onTap: logout),
         ]),
       }),
     ])),
@@ -238,6 +275,7 @@ class _AssistantState extends State<Assistant> {
 
   @override
   void dispose() {
+    unawaited(push.dispose());
     service.client.close();
     phone.dispose();
     otp.dispose();

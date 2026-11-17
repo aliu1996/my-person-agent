@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>划词助手</title>
+  <link rel="stylesheet" href="./mini.css">
+  <script src="./mini.js" defer></script>
+</head>
+<body>
+  <header class="mini-header">
+    <h1>划词助手</h1>
+    <button class="button-icon" id="close" type="button" aria-label="关闭">×</button>
+  </header>
+  <section class="selection" aria-label="选中的内容">
+    <h2>选中的内容</h2>
+    <p id="excerpt" class="excerpt empty">未检测到选中文本，仍可以向当前模型提问。</p>
+  </section>
+  <section id="thread" class="thread" hidden aria-live="polite"></section>
+  <form id="askForm" class="ask">
+    <label class="sr-only" for="prompt">输入问题</label>
+    <textarea id="prompt" placeholder="输入问题…" maxlength="4000" rows="3"></textarea>
+    <div class="ask-actions">
+      <button class="secondary" id="openPlatform" type="button">在平台中打开</button>
+      <button class="primary" id="send" type="submit">发送</button>
+    </div>
+  </form>
+  <p id="status" class="status" role="status"></p>
+</body>
+</html>

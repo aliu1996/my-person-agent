@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { isIP } from 'node:net'
-import { changeSettings, openSettingsDatabase, readSettings } from './settings-db.mjs'
+import { PathError, isInsideAuthorizedFolder, resolveLocalPath, writeAuthorizedFile } from './folders.mjs'
+import { changeSettings, deleteFolder, insertFolder, listFolders, openSettingsDatabase, readSettings } from './settings-db.mjs'
 
 export class SettingsError extends Error {}
 
@@ -80,6 +81,17 @@ function selectRemaining(settings) {
   }
 }
 
+function samePath(left, right) {
+  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right
+}
+
+function rethrowPath(error) {
+  if (error instanceof PathError || error instanceof SettingsError) {
+    throw error instanceof SettingsError ? error : new SettingsError(error.message)
+  }
+  throw new SettingsError('无法更新本机目录授权')
+}
+
 export function createSettingsStore(file, keyStore) {
   let pendingWrite = Promise.resolve()
   let opening
@@ -104,6 +116,12 @@ export function createSettingsStore(file, keyStore) {
         throw new SettingsError('无法保存本机模型设置')
       }
     })
+    pendingWrite = change.catch(() => {})
+    return change
+  }
+
+  function queued(work) {
+    const change = pendingWrite.then(async () => work(await load()))
     pendingWrite = change.catch(() => {})
     return change
   }
@@ -204,5 +222,52 @@ export function createSettingsStore(file, keyStore) {
         apiKey: encryptedKey ? await keyStore.decrypt(encryptedKey) : '',
       }
     },
+
+    async listFolders() {
+      await pendingWrite
+      return listFolders(await load())
+    },
+
+    addFolder(input) {
+      return queued((db) => {
+        try {
+          const folder = resolveLocalPath(input)
+          const folders = listFolders(db)
+          if (folders.some((row) => samePath(row.path, folder))) {
+            throw new SettingsError('该目录已在白名单中')
+          }
+          const id = randomUUID()
+          insertFolder(db, id, folder)
+          return { id, path: folder, folders: listFolders(db) }
+        } catch (error) {
+          rethrowPath(error)
+        }
+      })
+    },
+
+    removeFolder(id) {
+      return queued((db) => {
+        if (typeof id !== 'string' || !id) throw new SettingsError('目录不存在')
+        if (!deleteFolder(db, id)) throw new SettingsError('目录不存在')
+        return { folders: listFolders(db) }
+      })
+    },
+
+    writeLocalFile(input, confirm) {
+      if (typeof confirm !== 'function') throw new SettingsError('写入前必须确认')
+      return queued(async (db) => {
+        const folders = listFolders(db).map((row) => row.path)
+        try {
+          return await writeAuthorizedFile(folders, input, confirm)
+        } catch (error) {
+          if (error instanceof PathError || error instanceof SettingsError) {
+            throw error instanceof SettingsError ? error : new SettingsError(error.message)
+          }
+          throw new SettingsError('无法写入本地文件')
+        }
+      })
+    },
   }
 }
+
+export { isInsideAuthorizedFolder, resolveLocalPath }
