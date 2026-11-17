@@ -30,8 +30,10 @@ npm test
 ```powershell
 uv sync --all-packages
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-docker compose -f deploy/compose/docker-compose.yml up -d
+docker compose --project-directory . -f deploy/compose/docker-compose.yml up -d
 ```
+
+默认只启动 Postgres、Redis、对象存储和 Higress。Postgres / Redis / 控制台端口只绑定本机回环地址。若要把应用进程也放到 Docker 里，或在一台 Linux 服务器上自建，见 [deploy/compose/README.md](deploy/compose/README.md)。
 
 在 `.env` 设置初始管理员的 `INIT_ADMIN_USERNAME` 和 `INIT_ADMIN_PASSWORD`。首次迁移创建账号。之后修改环境变量不会重置已有管理员的密码。部署前为用户端 JWT、管理员 JWT 和加密主密钥分别设置高强度随机值。加密主密钥用于供应商 Key 和 TOTP 密钥，后续读取密文需要同一个值。
 
@@ -123,7 +125,9 @@ npm --prefix services/dsh-bridge start
 - 仓库未包含 iOS Xcode 工程（需在 macOS 上用 Xcode 构建）。安装 Flutter 后，在 `apps/mobile` 执行 `flutter create --platforms=ios --project-name pa_mobile .` 生成 iOS 壳，并避免覆盖已有 `lib/` 源码。随后在 `ios/Runner/Info.plist` 中声明 `NSMicrophoneUsageDescription`、`NSSpeechRecognitionUsageDescription` 和 `NSCameraUsageDescription`。
 - 移动端推送走已有的 FCM 后端。登录后会注册设备令牌，退出登录时注销；点击带会话信息的通知会打开对应会话。应用在缺少 Firebase 配置时仍可编译运行，只是推送不可用。启用推送时请把 Firebase 控制台下载的 `google-services.json` 放到 `apps/mobile/android/app/`，iOS 则把 `GoogleService-Info.plist` 放到 `ios/Runner/`。这两份文件已加入 `.gitignore`，不要提交。无需额外 `--dart-define`；配置文件就位后，下次构建会自动接入 Google Services 插件。
 - 监控配置位于 `deploy/observability`。用 `docker compose -f deploy/observability/compose.yml up -d` 启动 Grafana、Prometheus、Loki 和 OTLP 接收器。Prometheus 从宿主机抓取 8100–8102 的 `/metrics`。Loki 读取仓库的 `logs/*.log`。配置 `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces` 可导出请求追踪。设置 Langfuse 地址与凭据后，上报采样后的回合元数据。
-- 仅在隔离压测环境运行 `k6 run deploy/observability/stream-load.js`。通过 `PA_LOAD_URL` 指定 URL，通过 `PA_LOAD_USERS` 指向测试账户 JSON，列表项含 `sessionId` 和 `jwt`，每个虚拟用户使用独立会话。默认包含 4,250 个快路径和 750 个 Agent 虚拟用户，可用 `PA_FAST_VUS` 与 `PA_AGENT_VUS` 调整。
+- 单机 Docker Compose 部署见 [deploy/compose/README.md](deploy/compose/README.md)。本机开发默认只启动基础设施；在一台 Linux 服务器上自建时，设置 `COMPOSE_PROFILES=app` 后即可一并启动应用进程。
+- 审核评测框架见 [deploy/eval/README.md](deploy/eval/README.md)。离线可跑仓库内的少量占位样本；完整 2,000 条评测集和算法备案材料需另行提供，不能把占位结果当作上线验收已完成。
+- 仅在隔离压测环境运行完整的 `k6` 脚本。用法见 [deploy/observability/README.md](deploy/observability/README.md)。通过 `PA_LOAD_URL` 指定 URL，通过 `PA_LOAD_USERS` 指向测试账户 JSON，列表项含 `sessionId` 和 `jwt`，每个虚拟用户使用独立会话。默认包含 4,250 个快路径和 750 个 Agent 虚拟用户，可用 `PA_FAST_VUS` 与 `PA_AGENT_VUS` 调整。本地冒烟可将这两个变量设为 `1`，并使用 `deploy/observability/users.example.json`。完整 5,000 并发需要隔离环境和 5,000 条测试会话。
 
 ## 测试和设计
 
@@ -141,3 +145,26 @@ uv run --all-packages pytest
 - [Phase 5 设计](docs/superpowers/specs/2026-11-17-phase5-clients-observability-launch-design.md)
 - [API 契约](docs/superpowers/specs/2026-11-17-personal-assistant-api-contract.md)
 - [数据模型](docs/superpowers/specs/2026-11-17-personal-assistant-data-model.md)
+
+## Windows 桌面端安装包
+
+桌面端可以用 electron-builder 打出可安装的 Windows 程序。打包前需要已安装 Node.js 24。日常开发仍使用上文的 `npm start`。
+
+在仓库中进入桌面端目录，安装依赖并生成安装包：
+
+```powershell
+cd apps/web-user
+npm install
+npm run dist:win
+```
+
+`npm run pack:win` 会先构建平台页面，再导出未打包的 `release/win-unpacked/` 目录，便于检查文件是否完整。`npm run dist:win` 同样先执行 `npm run build`，然后生成可安装的 exe。
+
+成品在 `apps/web-user/release/`，该目录已加入 `.gitignore`，不要把安装包提交到 Git。典型文件名：
+
+- `personal-assistant-desktop-0.1.0-setup-win-x64.exe`：NSIS 安装程序。双击运行，按向导安装到 Windows，可创建桌面快捷方式和开始菜单项。
+- `personal-assistant-desktop-0.1.0-portable-win-x64.exe`：便携版，无需安装即可运行。
+
+安装完成后，从开始菜单或桌面快捷方式打开「24小时个人助理」。个人模型配置和 API Key 仍保存在当前 Windows 用户的应用数据目录。平台对话默认连接 `http://127.0.0.1:8100` 和 `http://127.0.0.1:8101`。若后端部署在远程服务器，先设置环境变量再启动，例如 `$env:CHAT_API_URL="http://你的服务器地址:8100"` 和 `$env:CHAT_STREAM_URL="http://你的服务器地址:8101"`。
+
+当前打包不包含代码签名。如果打包时因 npm.taobao.org 证书错误导致 Electron 下载失败，可在本次终端临时设置 `$env:ELECTRON_MIRROR="https://cdn.npmmirror.com/binaries/electron/"` 和 `$env:ELECTRON_BUILDER_BINARIES_MIRROR="https://cdn.npmmirror.com/binaries/electron-builder-binaries/"`，然后再运行 `npm run dist:win`。Windows 可能提示未知发布者，选择仍要运行即可。若需要签名，在 `apps/web-user/package.json` 的 `build` 配置中自行添加证书。

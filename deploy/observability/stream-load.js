@@ -7,7 +7,12 @@ const users = new SharedArray('seeded accounts', () => JSON.parse(open(__ENV.PA_
 const fast = Number(__ENV.PA_FAST_VUS || 4250)
 const agent = Number(__ENV.PA_AGENT_VUS || 750)
 if (users.length < fast + agent || !__ENV.PA_LOAD_URL) {
-  throw new Error('Provide one different test session per VU and an explicit load target')
+  throw new Error(
+    'Set PA_LOAD_URL and PA_LOAD_USERS (JSON array of {sessionId, jwt}). ' +
+    'Provide one unique test session per VU (PA_FAST_VUS + PA_AGENT_VUS). ' +
+    'Local smoke: PA_FAST_VUS=1 PA_AGENT_VUS=1 and deploy/observability/users.example.json. ' +
+    'The default 4250+750 run needs an isolated environment and 5000 seeded sessions.',
+  )
 }
 export const options = {
   scenarios: {

@@ -8,7 +8,9 @@
     "start": "npm run build && electron .",
     "dev": "vite --config vite.config.mjs",
     "build": "vite build --config vite.config.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "pack:win": "npm run build && electron-builder --win --x64 --dir",
+    "dist:win": "npm run build && electron-builder --win --x64"
   },
   "dependencies": {
     "markdown-it": "^14.1.0",
@@ -18,6 +20,48 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "electron": "^45.0.0",
+    "electron-builder": "^26.0.12",
     "vite": "^7.2.2"
+  },
+  "build": {
+    "appId": "app.personalassistant.desktop",
+    "productName": "24小时个人助理",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "renderer/**/*",
+      "dist/platform/**/*",
+      "package.json",
+      "!tests/**/*"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "24小时个人助理",
+      "unicode": true,
+      "artifactName": "personal-assistant-desktop-${version}-setup-${os}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "personal-assistant-desktop-${version}-portable-${os}-${arch}.${ext}"
+    }
   }
 }

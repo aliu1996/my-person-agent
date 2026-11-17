@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { desktopFile, platformAssetFile, rendererFile } from './paths.mjs'
 import {
   app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol,
   safeStorage, session, shell,
@@ -176,7 +176,7 @@ function registerAssets() {
     )) {
       const types = { html: 'text/html', js: 'text/javascript', css: 'text/css' }
       try {
-        const content = await readFile(new URL('../dist' + url.pathname, import.meta.url))
+        const content = await readFile(platformAssetFile(app.getAppPath(), url.pathname))
         return new Response(content, { headers: {
           'Content-Type': types[url.pathname.split('.').at(-1)] + '; charset=utf-8',
           'X-Content-Type-Options': 'nosniff',
@@ -192,7 +192,7 @@ function registerAssets() {
     if (request.method !== 'GET' || !mime) {
       return new Response(null, { status: 404 })
     }
-    const body = await readFile(new URL(`../renderer${url.pathname}`, import.meta.url))
+    const body = await readFile(rendererFile(app.getAppPath(), url.pathname))
     return new Response(body, { headers: { 'Content-Type': mime, 'X-Content-Type-Options': 'nosniff' } })
   })
 }
@@ -260,7 +260,7 @@ async function openMiniAssistant() {
     autoHideMenuBar: true, alwaysOnTop: true, minimizable: false, maximizable: false,
     backgroundColor: '#141414', title: '划词助手',
     webPreferences: {
-      preload: fileURLToPath(new URL('./mini-preload.cjs', import.meta.url)),
+      preload: desktopFile(app.getAppPath(), 'mini-preload.cjs'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -320,7 +320,7 @@ async function createWindow() {
     autoHideMenuBar: true,
     backgroundColor: '#101010',
     webPreferences: {
-      preload: fileURLToPath(new URL('./preload.cjs', import.meta.url)),
+      preload: desktopFile(app.getAppPath(), 'preload.cjs'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,

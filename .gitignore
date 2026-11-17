@@ -38,3 +38,12 @@ google-services.json
 GoogleService-Info.plist
 **/google-services.json
 **/GoogleService-Info.plist
+
+# Electron installer output
+apps/web-user/release/
+
+# Private eval / load-test datasets and reports
+deploy/eval/data/*
+!deploy/eval/data/.gitkeep
+deploy/observability/users.local.json
+deploy/observability/reports/

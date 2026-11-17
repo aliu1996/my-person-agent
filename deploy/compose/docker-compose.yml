@@ -1,18 +1,46 @@
+# 默认只启动基础设施，供本机开发（应用进程仍在宿主机运行）。
+# 单机自建请加 --profile app，或在仓库根目录的 .env 中设置 COMPOSE_PROFILES=app。
+# 请使用：docker compose --project-directory . -f deploy/compose/docker-compose.yml ...
+# 以便读取仓库根目录的 .env。
+
+x-app-env: &app-env
+  env_file:
+    - .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pa}:${POSTGRES_PASSWORD:-pa_dev}@postgres:5432/${POSTGRES_DB:-personal_assistant}
+    REDIS_URL: redis://redis:6379/0
+    S3_ENDPOINT: http://s3:9000
+    HIGRESS_GATEWAY_URL: http://higress:8080
+    HIGRESS_CONSOLE_URL: http://higress:8001
+    CHAT_API_URL: http://chat-api:8100
+    CHAT_STREAM_URL: http://chat-stream:8101
+    SEARCH_SERVICE_URL: http://search:8102
+    DSH_BRIDGE_URL: http://dsh-bridge:8103
+    SANDBOX_URL: http://sandbox:8104
+    DSH_BRIDGE_HOST: "0.0.0.0"
+    DSH_BRIDGE_PORT: "8103"
+    SANDBOX_HOST: "0.0.0.0"
+    SANDBOX_PORT: "8104"
+
+x-python-build: &python-build
+  context: ../..
+  dockerfile: deploy/docker/python.Dockerfile
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: pa-postgres
     environment:
-      POSTGRES_USER: pa
-      POSTGRES_PASSWORD: pa_dev
-      POSTGRES_DB: personal_assistant
+      POSTGRES_USER: ${POSTGRES_USER:-pa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pa_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-personal_assistant}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pa -d personal_assistant"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,7 +50,7 @@ services:
     container_name: pa-redis
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -35,14 +63,15 @@ services:
     image: rustfs/rustfs:latest
     container_name: pa-s3
     environment:
-      RUSTFS_ACCESS_KEY: minioadmin
-      RUSTFS_SECRET_KEY: minioadmin
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       RUSTFS_ADDRESS: ":9000"
       RUSTFS_CONSOLE_ADDRESS: ":9001"
       RUSTFS_CONSOLE_ENABLE: "true"
+    # 9000 供浏览器直传；控制台仅本机可访问
     ports:
       - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9001:9001"
     volumes:
       - s3_data:/data
 
@@ -50,11 +79,144 @@ services:
     image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/all-in-one:latest
     container_name: pa-higress
     ports:
-      - "8080:8080"
-      - "8001:8001"
-      - "8443:8443"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8443:8443"
     volumes:
       - higress_data:/data
+
+  migrate:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/chat-api:0.1.0
+    build:
+      <<: *python-build
+      args:
+        PACKAGE: chat-api
+    container_name: pa-migrate
+    restart: "no"
+    command: ["alembic", "-c", "services/chat-api/alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  chat-api:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/chat-api:0.1.0
+    build:
+      <<: *python-build
+      args:
+        PACKAGE: chat-api
+    container_name: pa-chat-api
+    command: ["uvicorn", "chat_api.main:app", "--host", "0.0.0.0", "--port", "8100"]
+    ports:
+      - "8100:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  chat-stream:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/chat-stream:0.1.0
+    build:
+      <<: *python-build
+      args:
+        PACKAGE: chat-stream
+    container_name: pa-chat-stream
+    command: ["uvicorn", "chat_stream.main:app", "--host", "0.0.0.0", "--port", "8101"]
+    ports:
+      - "8101:8101"
+    depends_on:
+      redis:
+        condition: service_healthy
+      chat-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8101/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  search:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/search-service:0.1.0
+    build:
+      <<: *python-build
+      args:
+        PACKAGE: search-service
+    container_name: pa-search
+    command: ["uvicorn", "search_service.main:app", "--host", "0.0.0.0", "--port", "8102"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8102/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  worker:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/worker:0.1.0
+    build:
+      <<: *python-build
+      args:
+        PACKAGE: pa-worker
+    container_name: pa-worker
+    command: ["arq", "worker.main.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  dsh-bridge:
+    profiles: ["app"]
+    <<: *app-env
+    image: personal-assistant/dsh-bridge:0.1.0
+    build:
+      context: ../..
+      dockerfile: deploy/docker/dsh-bridge.Dockerfile
+    container_name: pa-dsh-bridge
+    depends_on:
+      chat-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8103/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  sandbox:
+    profiles: ["sandbox"]
+    <<: *app-env
+    image: personal-assistant/sandbox:0.1.0
+    build:
+      context: ../..
+      dockerfile: deploy/docker/sandbox.Dockerfile
+    container_name: pa-sandbox
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # 任务容器镜像需在宿主机预先构建：docker build -f deploy/sandbox/Dockerfile -t pa-sandbox:phase4 .
 
 volumes:
   pg_data:
