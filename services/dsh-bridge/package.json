@@ -1,0 +1,14 @@
+{
+  "name": "@pa/dsh-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.9.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env src/index.mjs",
+    "sandbox": "node --env-file-if-exists=../../.env src/sandbox.mjs",
+    "test": "node --test"
+  }
+}

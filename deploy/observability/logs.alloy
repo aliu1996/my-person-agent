@@ -1,0 +1,12 @@
+local.file_match "assistant" {
+  path_targets = [{"__path__" = "/var/log/pa/*.log", "job" = "personal-assistant"}]
+}
+loki.source.file "assistant" {
+  targets    = local.file_match.assistant.targets
+  forward_to = [loki.write.local.receiver]
+}
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

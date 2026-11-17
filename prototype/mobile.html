@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人工作助手 · 手机端（Flutter）原型</title>
+  <link rel="stylesheet" href="./tokens.css" />
+  <style>
+    body {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #050505; padding: 20px; gap: 14px;
+    }
+    .demo-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .phone {
+      width: 380px; height: 780px; border-radius: 40px;
+      background: var(--bg-base); border: 4px solid #2A2A2A;
+      overflow: hidden; display: flex; flex-direction: column; position: relative;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+    }
+    .status-bar { height: 34px; padding: 10px 22px 0; display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--text-primary); flex-shrink: 0; }
+    .m-top { height: 46px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .m-pill { padding: 5px 12px; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border-default); font-size: 12.5px; font-weight: 500; }
+
+    /* App Push 模拟横幅 */
+    .push-banner {
+      position: absolute; top: 12px; left: 12px; right: 12px; z-index: 40;
+      background: var(--bg-elevated); border: 1px solid var(--border-strong);
+      border-radius: 16px; padding: 11px 14px; display: none; gap: 10px; align-items: center;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.55); cursor: pointer;
+    }
+    .push-banner.open { display: flex; }
+
+    .m-scroll { flex: 1; overflow-y: auto; padding: 10px 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+    .m-user { align-self: flex-end; max-width: 82%; background: var(--bg-elevated); border-radius: 16px; padding: 9px 13px; font-size: 13px; }
+    .m-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.65; }
+    .m-refs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .m-ref { min-width: 150px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; padding: 10px; font-size: 11.5px; flex-shrink: 0; }
+
+    /* 底部胶囊输入 + Tab 栏 */
+    .m-composer-wrap { padding: 6px 12px 8px; flex-shrink: 0; position: relative; }
+    .m-composer {
+      height: 42px; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border-default);
+      padding: 0 6px 0 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .m-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 13px; }
+    .m-tabs { height: 52px; border-top: 1px solid var(--border-default); background: var(--bg-base); display: grid; grid-template-columns: repeat(4, 1fr); flex-shrink: 0; }
+    .m-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--text-tertiary); cursor: pointer; gap: 2px; }
+    .m-tab.active { color: var(--text-primary); font-weight: 500; }
+
+    /* 半屏语音 / 拍照面板 */
+    .sheet {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 35; display: none; align-items: flex-end;
+    }
+    .sheet.open { display: flex; }
+    .sheet-box { width: 100%; background: var(--bg-elevated); border-top: 1px solid var(--border-strong); border-radius: 22px 22px 0 0; padding: 20px 18px 26px; display: flex; flex-direction: column; gap: 14px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="demo-bar">
+    <button class="btn btn-secondary btn-sm" onclick="triggerPush()">模拟 App 推送通知</button>
+    <button class="btn btn-secondary btn-sm" onclick="toggleWeakNet()">模拟弱网续传</button>
+    <button class="btn btn-secondary btn-sm" onclick="toggleTheme()">切换深 / 浅色</button>
+    <a href="./index.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">Web/桌面端 ↗</a>
+    <a href="./admin.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">管理后台 ↗</a>
+  </div>
+
+  <div class="phone">
+    <!-- App Push 横幅 -->
+    <div class="push-banner" id="pushBanner" onclick="this.classList.remove('open');switchTab('activity')">
+      <span style="width:28px;height:28px;border-radius:8px;background:var(--btn-primary-bg);color:var(--btn-primary-text);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">G</span>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:600;">每日 AI 行业早报已送达</div>
+        <div style="font-size:11px;color:var(--text-secondary);">点击直达早报会话查看 5 条要点</div>
+      </div>
+      <span style="font-size:11px;color:var(--text-tertiary);">刚刚</span>
+    </div>
+
+    <div class="status-bar"><span>11:12</span><span>5G · 92%</span></div>
+
+    <div class="m-top">
+      <span style="font-size:13px;color:var(--text-secondary);cursor:pointer;" onclick="switchTab('chat')">≡</span>
+      <span class="m-pill">个人助手 ▾</span>
+      <span style="font-size:12px;color:var(--text-secondary);cursor:pointer;" onclick="switchTab('me')">860分</span>
+    </div>
+
+    <!-- 弱网续传提示条 -->
+    <div id="weakNetBar" class="hidden" style="margin:0 14px 6px;padding:7px 12px;border-radius:10px;background:var(--color-warning-subtle);color:var(--color-warning);font-size:11.5px;display:flex;justify-content:space-between;">
+      <span>网络切后台恢复中，已从断点续传遗漏片段</span>
+      <span style="cursor:pointer;" onclick="toggleWeakNet()">×</span>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="m-scroll" id="mBody"></div>
+
+    <!-- 底部胶囊输入（仅对话页显示） -->
+    <div class="m-composer-wrap" id="mComposer">
+      <div class="m-composer">
+        <button class="btn btn-ghost btn-icon btn-sm" style="border-radius:999px;border:1px solid var(--border-default);" onclick="openSheet('plus')">＋</button>
+        <input class="m-input" id="mIn" placeholder="发消息或按住说话..." onkeydown="if(event.key==='Enter')mSend()" />
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="openSheet('voice')" title="语音通话">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>
+        </button>
+        <button class="btn btn-primary btn-icon btn-sm" style="border-radius:999px;" onclick="mSend()">↑</button>
+      </div>
+    </div>
+
+    <!-- 底部 4 Tab -->
+    <div class="m-tabs">
+      <div class="m-tab active" data-t="chat" onclick="switchTab('chat', this)"><span>对话</span></div>
+      <div class="m-tab" data-t="library" onclick="switchTab('library', this)"><span>Library</span></div>
+      <div class="m-tab" data-t="activity" onclick="switchTab('activity', this)"><span>动态</span></div>
+      <div class="m-tab" data-t="me" onclick="switchTab('me', this)"><span>我的</span></div>
+    </div>
+
+    <!-- 半屏面板（语音 / 拍照识图） -->
+    <div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()">
+      <div class="sheet-box" id="sheetBox"></div>
+    </div>
+  </div>
+
+  <script>
+    let curTab = 'chat';
+
+    function switchTab(t, el) {
+      curTab = t;
+      document.querySelectorAll('.m-tab').forEach(x => x.classList.toggle('active', x.dataset.t === t));
+      document.getElementById('mComposer').classList.toggle('hidden', t !== 'chat');
+      renderMobile();
+    }
+
+    function renderMobile() {
+      const b = document.getElementById('mBody');
+      if (curTab === 'chat') {
+        b.innerHTML = `
+          <div class="m-user">汇总 Q3 华东区销售数据</div>
+          <div class="m-card">
+            <strong>华东区 Q3 总营收 ¥4,280 万（+14.2%）</strong>
+            <div style="color:var(--text-secondary);margin-top:6px;">• 上海 ¥1,820 万（+18.4%）<br>• 杭州 ¥1,140 万（+12.1%）<br>• 苏州 ¥790 万（+9.6%）</div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;">已存入 Library · 消耗 12 积分</div>
+          </div>
+          <div class="m-refs">
+            <div class="m-ref"><strong>Q3 销售分析.pptx</strong><div style="color:var(--text-tertiary);margin-top:4px;">2.4 MB · 点击预览</div></div>
+            <div class="m-ref"><strong>华东对比图.png</strong><div style="color:var(--text-tertiary);margin-top:4px;">图表产物</div></div>
+            <div class="m-ref"><strong>[1] 零售季度报告</strong><div style="color:var(--text-tertiary);margin-top:4px;">report.example.com</div></div>
+          </div>`;
+      } else if (curTab === 'library') {
+        b.innerHTML = `
+          <strong style="font-size:16px;">Library 资产库</strong>
+          <div class="m-card"><strong>Q3 销售分析.pptx</strong><div style="font-size:11.5px;color:var(--text-tertiary);">2.4 MB · 今天</div></div>
+          <div class="m-card"><strong>华东三城对比图.png</strong><div style="font-size:11.5px;color:var(--text-tertiary);">1280×720 · 今天</div></div>`;
+      } else if (curTab === 'activity') {
+        b.innerHTML = `
+          <strong style="font-size:16px;">Activity & 定时任务</strong>
+          <div class="m-card"><span class="badge badge-success">已送达</span> <strong style="margin-left:6px;">每天 08:00 · AI 行业早报</strong><div style="font-size:11.5px;color:var(--text-tertiary);margin-top:4px;">今天 08:00 执行成功 · 消耗 8 积分</div></div>
+          <div class="m-card"><span class="badge badge-accent">运行中</span> <strong style="margin-left:6px;">每周五 17:00 · 周报汇总</strong></div>`;
+      } else {
+        b.innerHTML = `
+          <strong style="font-size:16px;">我的账号</strong>
+          <div class="m-card"><strong>今日剩余 860 / 1000 积分</strong><div style="font-size:11.5px;color:var(--text-tertiary);margin-top:4px;">每日 00:00 自动刷新</div></div>
+          <div class="m-card"><strong>自动记忆（2 条）</strong><div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px;">• 你在上海工作，偏好简洁回答<br>• 常用 Python 3.11 + Vue 3</div></div>`;
+      }
+    }
+
+    function mSend() {
+      const i = document.getElementById('mIn');
+      const v = i.value.trim();
+      if (!v) return;
+      i.value = '';
+      const b = document.getElementById('mBody');
+      b.innerHTML += `<div class="m-user">${v}</div><div class="m-card">已收到「${v}」，移动端走同一 FastAPI 流式接口与断点续传协议。</div>`;
+      b.scrollTop = b.scrollHeight;
+    }
+
+    function openSheet(kind) {
+      const box = document.getElementById('sheetBox');
+      if (kind === 'voice') {
+        box.innerHTML = `
+          <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <strong>正在聆听...</strong>
+            <div style="width:64px;height:64px;border-radius:999px;background:var(--accent-subtle);border:2px solid var(--accent-primary);display:flex;align-items:center;justify-content:center;color:var(--accent-primary);font-weight:700;">声波</div>
+            <div style="font-size:12px;color:var(--text-secondary);">支持语音转文字输入 & TTS 语音播报</div>
+            <button class="btn btn-primary" style="width:100%;" onclick="closeSheet();document.getElementById('mIn').value='帮我记一下明天上午十点开项目评审会';mSend()">模拟语音识别完成并发送</button>
+          </div>`;
+      } else {
+        box.innerHTML = `
+          <strong>手机端快捷能力</strong>
+          <button class="btn btn-secondary" style="justify-content:flex-start;" onclick="closeSheet();document.getElementById('mIn').value='[已拍照上传合同扫描件] 帮我提取关键条款与风险点';mSend()">拍照识图 / 文档扫描</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start;" onclick="closeSheet()">上传手机文件</button>
+          <button class="btn btn-ghost" onclick="closeSheet()">取消</button>`;
+      }
+      document.getElementById('sheet').classList.add('open');
+    }
+    function closeSheet() { document.getElementById('sheet').classList.remove('open'); }
+    function triggerPush() {
+      const p = document.getElementById('pushBanner');
+      p.classList.add('open');
+      setTimeout(() => p.classList.remove('open'), 4500);
+    }
+    function toggleWeakNet() { document.getElementById('weakNetBar').classList.toggle('hidden'); }
+    function toggleTheme() {
+      const r = document.documentElement;
+      r.getAttribute('data-theme') === 'light' ? r.removeAttribute('data-theme') : r.setAttribute('data-theme', 'light');
+    }
+
+    renderMobile();
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+name: pa_mobile
+description: 24小时个人助理手机端
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.4.0
+  image_picker: ^1.1.2
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  url_launcher: ^6.3.0
+flutter:
+  uses-material-design: true

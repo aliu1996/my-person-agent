@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人工作助手 · Grok Bot 极简深色版</title>
+  <link rel="stylesheet" href="./tokens.css" />
+  <style>
+    body { height: 100vh; overflow: hidden; display: flex; background: var(--bg-base); }
+
+    /* 1. 极窄左侧图标栏 (58px, 无硬分割线) */
+    .rail {
+      width: 58px;
+      background: var(--rail-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0 18px;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .rail-group { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .bot-btn {
+      width: 38px; height: 38px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; transition: background 0.15s;
+    }
+    .bot-btn:hover { background: var(--bg-surface); }
+    .bot-btn.active { background: var(--bg-elevated); }
+    .bot-avatar {
+      width: 26px; height: 26px; border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .bot-star {
+      position: absolute; right: 3px; bottom: 3px;
+      width: 11px; height: 11px; border-radius: 999px;
+      background: #F59E0B; color: #0A0A0A;
+      font-size: 8px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--rail-bg);
+    }
+    .rail-icon {
+      width: 32px; height: 32px; border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .rail-icon:hover { background: var(--bg-surface); color: var(--text-primary); }
+    .user-avatar {
+      width: 30px; height: 30px; border-radius: 999px;
+      background: var(--bg-elevated); color: var(--text-primary);
+      font-size: 11px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+
+    /* 2. 主舞台：超大留白 */
+    .stage { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+
+    .float-top {
+      position: absolute; top: 14px; left: 24px; right: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      pointer-events: none; z-index: 15;
+    }
+    .float-top > * { pointer-events: auto; }
+    .bot-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      background: var(--bg-elevated);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      border: 1px solid var(--border-default);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .bot-pill:hover { background: var(--bg-elevated); }
+    .share-pill {
+      padding: 6px 15px; border-radius: 999px;
+      background: transparent; border: 1px solid var(--border-default);
+      color: var(--text-primary); font-size: 12px; cursor: pointer;
+    }
+    .share-pill:hover { background: var(--bg-surface); border-color: var(--border-strong); }
+
+    /* 3. 居中窄对话流（更多留白，对齐截图比例） */
+    .chat-scroll { flex: 1; overflow-y: auto; padding: 64px 24px 24px; }
+    .chat-stream { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+
+    .msg-user-row { display: flex; justify-content: flex-end; }
+    .msg-user {
+      max-width: 78%; background: var(--bg-elevated);
+      border-radius: 18px; padding: 10px 16px; font-size: 14px; line-height: 1.65;
+    }
+
+    .msg-ai { display: flex; flex-direction: column; gap: 14px; font-size: 14px; line-height: 1.7; }
+
+    .clean-card {
+      background: var(--bg-surface); border: 1px solid var(--card-line);
+      border-radius: 14px; overflow: hidden;
+    }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .tbl th, .tbl td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--card-line); vertical-align: top; }
+    .tbl th { color: var(--text-tertiary); font-weight: 500; width: 96px; }
+    .tbl tr:last-child td, .tbl tr:last-child th { border-bottom: none; }
+
+    /* 速览卡 + 右侧外置操作栏（对齐截图） */
+    .summary-row { display: flex; align-items: center; gap: 12px; }
+    .summary-box {
+      flex: 1; background: var(--bg-surface); border: 1px solid var(--card-line);
+      border-radius: 14px; padding: 14px 18px; font-size: 13.5px; line-height: 1.7;
+    }
+    .summary-box ul { margin: 6px 0 0; padding-left: 16px; color: var(--text-secondary); }
+    .side-actions {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text-tertiary); flex-shrink: 0;
+    }
+    .side-act { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; }
+    .side-act:hover { color: var(--text-primary); background: var(--bg-surface); }
+
+    /* 底部 3 张并排圆角小卡（对齐截图） */
+    .ref-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .ref-card {
+      background: var(--bg-surface); border: 1px solid var(--card-line);
+      border-radius: 12px; padding: 12px 14px; height: 64px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    }
+    .ref-card:hover { background: var(--bg-elevated); border-color: var(--border-default); }
+    .ref-title { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .ref-domain { font-size: 12px; color: var(--text-tertiary); }
+
+    /* 极轻无边框记忆提示 */
+    .mem-subtle {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; color: var(--text-tertiary); padding: 0 4px;
+    }
+
+    /* 4. 更薄的底部单行胶囊输入框 (42px 高) */
+    .composer-dock { padding: 6px 24px 18px; flex-shrink: 0; }
+    .pill-composer {
+      max-width: 640px; height: 42px; margin: 0 auto;
+      background: var(--bg-surface); border: 1px solid var(--border-default);
+      border-radius: 999px; padding: 0 6px 0 8px;
+      display: flex; align-items: center; gap: 8px; position: relative;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    .pill-composer:focus-within { border-color: var(--border-strong); }
+    .plus-btn {
+      width: 28px; height: 28px; border-radius: 999px;
+      border: 1px solid var(--border-default); background: transparent;
+      color: var(--text-secondary); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .plus-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .pill-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text-primary); font-family: inherit; font-size: 14px;
+    }
+    .pill-input::placeholder { color: var(--text-tertiary); }
+    .mic-btn {
+      width: 28px; height: 28px; border-radius: 999px; background: transparent;
+      border: none; color: var(--text-secondary); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mic-btn:hover { color: var(--text-primary); }
+    .wave-btn {
+      width: 30px; height: 30px; border-radius: 999px;
+      background: var(--btn-primary-bg); color: var(--btn-primary-text);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .wave-btn:hover { background: var(--btn-primary-hover); }
+
+    /* 浮层与弹窗 */
+    .popover {
+      position: absolute; background: var(--bg-elevated);
+      border: 1px solid var(--border-strong); border-radius: 14px;
+      padding: 8px; z-index: 40; box-shadow: 0 14px 36px rgba(0,0,0,0.65);
+      display: none; flex-direction: column; gap: 3px;
+    }
+    .popover.open { display: flex; }
+    .pop-item { padding: 8px 10px; border-radius: 8px; font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .pop-item:hover { background: var(--bg-hover); }
+
+    .drawer-mask { position: fixed; inset: 0; left: 58px; background: rgba(0,0,0,0.48); z-index: 30; display: none; }
+    .drawer-mask.open { display: block; }
+    .drawer { width: 272px; height: 100%; background: var(--bg-surface); border-right: 1px solid var(--border-default); padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 60; }
+    .modal-mask.open { display: flex; }
+    .modal-box { background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 20px; width: 540px; max-width: 92vw; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; max-height: 84vh; overflow-y: auto; }
+
+    .seg-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border-default); }
+    .seg-tab { padding: 6px 14px; border-radius: 8px; font-size: 12.5px; color: var(--text-secondary); cursor: pointer; }
+    .seg-tab.active { background: var(--bg-elevated); color: var(--text-primary); font-weight: 500; }
+
+    .toast-box { position: fixed; top: 18px; right: 22px; z-index: 90; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default); border-radius: 999px;
+      padding: 7px 14px; font-size: 12.5px; color: var(--text-primary);
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      animation: toastIn 0.2s ease-out;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mini-float { position: fixed; right: 24px; bottom: 76px; width: 310px; background: var(--float-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-strong); border-radius: 16px; padding: 14px; z-index: 50; display: none; flex-direction: column; gap: 10px; }
+    .mini-float.open { display: flex; }
+    .field-input { width: 100%; height: 36px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border-default); padding: 0 12px; color: var(--text-primary); font-family: inherit; font-size: 12.5px; outline: none; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- 极窄图标栏 -->
+  <aside class="rail">
+    <div class="rail-group">
+      <div class="bot-btn active" title="个人全能助手" onclick="switchBot('all', this)">
+        <div class="bot-avatar" style="background:var(--btn-primary-bg);color:var(--btn-primary-text);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M8 15l8-6"/></svg>
+        </div>
+        <span class="bot-star">★</span>
+      </div>
+      <div class="bot-btn" title="每日早报 Bot" onclick="switchBot('morning', this)">
+        <div class="bot-avatar" style="background:var(--bg-elevated);border:1px solid var(--border-default);color:var(--text-primary);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M10 6h8M10 10h8M10 14h4"/></svg>
+        </div>
+      </div>
+      <div class="bot-btn" title="数据分析 Bot" onclick="switchBot('data', this)">
+        <div class="bot-avatar" style="background:var(--accent-primary);color:#fff;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20V14M10 20V8M16 20V11M22 20V4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail-group">
+      <div class="rail-icon" title="新建对话" onclick="newChat()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div class="rail-icon" title="Library 资产库与定时任务" onclick="openHubModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </div>
+      <div class="rail-icon" title="切换深色 / 浅色模式" onclick="toggleTheme()" id="themeBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </div>
+      <div class="user-avatar" title="设置 · 记忆 · 积分" onclick="openSettings()">LZ</div>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="stage">
+    <!-- 极简悬浮顶栏（仅居中 Bot 药丸 + 右上角 Share） -->
+    <div class="float-top">
+      <div style="width:64px;"></div>
+      <div class="bot-pill" onclick="toggleHistory()">
+        <span id="botPillIcon" style="width:18px;height:18px;border-radius:999px;background:var(--btn-primary-bg);color:var(--btn-primary-text);display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M8 15l8-6"/></svg>
+        </span>
+        <span id="botTitle">个人助手</span>
+      </div>
+      <button class="share-pill" onclick="openModal('shareModal')">Share</button>
+    </div>
+
+    <!-- 居中对话流 -->
+    <div class="chat-scroll" id="chatScroll">
+      <div class="chat-stream" id="chatStream"></div>
+    </div>
+
+    <!-- 超薄单行胶囊输入框 -->
+    <div class="composer-dock">
+      <div class="pill-composer">
+        <div class="popover" id="plusMenu" style="bottom:48px;left:0;width:248px;">
+          <div class="pop-item" onclick="toggleAttach();closePlus()"><span>上传附件（PDF/表格/图片）</span><span style="color:var(--text-tertiary);">+</span></div>
+          <div class="pop-item" onclick="toggleWeb()"><span>联网搜索</span><span id="webState" style="color:var(--accent-primary);">已开启</span></div>
+          <div class="pop-item" onclick="toggleMiniFloat();closePlus()"><span>打开桌面划词浮窗</span><span style="color:var(--text-tertiary);">Alt+Space</span></div>
+          <div style="height:1px;background:var(--border-default);margin:3px 0;"></div>
+          <div style="font-size:11px;color:var(--text-tertiary);padding:2px 10px;">切换模型</div>
+          <div class="pop-item" onclick="setModel('DeepSeek-V3',1)"><span>DeepSeek-V3 · 快速</span><span class="m-chk" data-m="DeepSeek-V3" style="color:var(--accent-primary);"></span></div>
+          <div class="pop-item" onclick="setModel('DeepSeek-R1',2)"><span>DeepSeek-R1 · 深度思考</span><span class="m-chk" data-m="DeepSeek-R1" style="color:var(--accent-primary);">✓</span></div>
+          <div class="pop-item" onclick="setModel('Qwen-VL-Max',3)"><span>Qwen-VL-Max · 视觉</span><span class="m-chk" data-m="Qwen-VL-Max" style="color:var(--accent-primary);"></span></div>
+        </div>
+
+        <button class="plus-btn" onclick="togglePlus()" title="附件 / 联网 / 模型">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <input class="pill-input" id="pillInput" placeholder="发消息给 个人助手" oninput="syncSendIcon()" onkeydown="if(event.key==='Enter'){sendMsg();}" />
+        <span id="attachTag" class="badge badge-neutral hidden" style="cursor:pointer;" onclick="toggleAttach()">销售表.xlsx ×</span>
+        <button class="mic-btn" onclick="showToast('语音输入已就绪','info')" title="语音输入">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>
+        </button>
+        <button class="wave-btn" id="sendWaveBtn" onclick="sendOrVoice()" title="语音通话 / 发送">
+          <svg id="waveIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg>
+          <svg id="arrowIcon" class="hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 历史会话抽屉 -->
+  <div class="drawer-mask" id="historyMask" onclick="if(event.target===this)toggleHistory()">
+    <div class="drawer">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;">
+        <strong style="font-size:13.5px;">历史对话</strong>
+        <button class="btn btn-primary btn-sm" onclick="newChat();toggleHistory()">＋ 新建</button>
+      </div>
+      <input class="field-input" style="height:32px;" placeholder="搜索对话..." />
+      <div style="font-size:11px;color:var(--text-tertiary);padding:6px 6px 0;">今天</div>
+      <div class="pop-item" style="background:var(--bg-elevated);" onclick="switchBot('all');toggleHistory()"><span>Q3 华东区销售数据分析</span></div>
+      <div class="pop-item" onclick="switchBot('morning');toggleHistory()"><span>每日 AI 行业早报</span></div>
+      <div style="font-size:11px;color:var(--text-tertiary);padding:6px 6px 0;">最近 7 天</div>
+      <div class="pop-item" onclick="switchBot('data');toggleHistory()"><span>Python 数据清洗脚本</span></div>
+      <div style="margin-top:auto;padding:8px;border-top:1px solid var(--border-default);display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);">
+        <span>今日剩余 <strong id="creditVal" style="color:var(--text-primary);">860</strong> 积分</span>
+        <a href="./design-system.html" style="color:var(--text-tertiary);text-decoration:none;">规范 ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library & Activity 弹窗 -->
+  <div class="modal-mask" id="hubModal" onclick="if(event.target===this)closeModal('hubModal')">
+    <div class="modal-box" style="width:620px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="seg-tabs" id="hubTabs">
+          <div class="seg-tab active" onclick="renderHub('library', this)">Library 资产库</div>
+          <div class="seg-tab" onclick="renderHub('activity', this)">Activity & 定时任务</div>
+        </div>
+        <span style="cursor:pointer;color:var(--text-tertiary);" onclick="closeModal('hubModal')">✕</span>
+      </div>
+      <div id="hubBody"></div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-mask" id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')">
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:16px;">个人设置</strong><span style="cursor:pointer;color:var(--text-tertiary);" onclick="closeModal('settingsModal')">✕</span></div>
+      <div class="seg-tabs" id="setTabs">
+        <div class="seg-tab active" onclick="renderSet('memory', this)">自动记忆</div>
+        <div class="seg-tab" onclick="renderSet('credits', this)">积分额度</div>
+        <div class="seg-tab" onclick="renderSet('privacy', this)">隐私与账号</div>
+      </div>
+      <div id="setBody"></div>
+    </div>
+  </div>
+
+  <!-- Share 弹窗 -->
+  <div class="modal-mask" id="shareModal" onclick="if(event.target===this)closeModal('shareModal')">
+    <div class="modal-box" style="width:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:15px;">分享对话</strong><span style="cursor:pointer;color:var(--text-tertiary);" onclick="closeModal('shareModal')">✕</span></div>
+      <div style="font-size:12.5px;color:var(--text-secondary);">生成公开只读链接（7 天后自动失效），可随时撤销。</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('shareModal')">取消</button>
+        <button class="btn btn-primary btn-sm" onclick="closeModal('shareModal');showToast('已复制分享链接','success')">复制链接</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 桌面端划词浮窗 -->
+  <div class="mini-float" id="miniFloat">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--text-secondary);">划词助手 · Alt+Space</span>
+      <span style="cursor:pointer;color:var(--text-tertiary);" onclick="toggleMiniFloat()">✕</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-tertiary);background:var(--bg-surface);padding:8px 10px;border-radius:8px;">"Q3 华东区总营收为 ¥4,280 万，环比 +14.2%"</div>
+    <input class="field-input" id="miniIn" placeholder="翻译 / 总结 / 解释..." onkeydown="if(event.key==='Enter')sendMini()" />
+  </div>
+
+  <div class="toast-box" id="toastBox"></div>
+
+  <script>
+    let credits = 860;
+    let webOn = true;
+    let model = { name: 'DeepSeek-R1', mult: 2 };
+    let curBot = 'all';
+    let memUndone = false;
+    let memories = [
+      { id: 'm1', text: '你在上海工作，偏好简洁、先给结论的回答' },
+      { id: 'm2', text: '常用技术栈：Python 3.11 + Vue 3' },
+    ];
+
+    function syncSendIcon() {
+      const has = document.getElementById('pillInput').value.trim().length > 0;
+      document.getElementById('waveIcon').classList.toggle('hidden', has);
+      document.getElementById('arrowIcon').classList.toggle('hidden', !has);
+    }
+
+    function sendOrVoice() {
+      const has = document.getElementById('pillInput').value.trim().length > 0;
+      if (has) sendMsg();
+      else showToast('实时语音对话已开启', 'info');
+    }
+
+    function switchBot(bot, el) {
+      curBot = bot;
+      if (el) {
+        document.querySelectorAll('.bot-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+      }
+      const titles = { all: '个人助手', morning: '每日早报 Bot', data: '数据分析 Bot' };
+      const icons = {
+        all: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M8 15l8-6"/></svg>',
+        morning: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/><path d="M10 6h8M10 10h8"/></svg>',
+        data: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 20V14M10 20V8M16 20V11M22 20V4"/></svg>'
+      };
+      document.getElementById('botTitle').textContent = titles[bot];
+      document.getElementById('botPillIcon').innerHTML = icons[bot];
+      document.getElementById('pillInput').placeholder = `发消息给 ${titles[bot]}`;
+      renderStream();
+    }
+
+    function newChat() { curBot = 'empty'; renderStream(); }
+
+    function renderStream() {
+      const s = document.getElementById('chatStream');
+      if (curBot === 'empty') {
+        s.innerHTML = `
+          <div style="margin-top:120px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;">
+            <h1 style="margin:0;font-size:24px;font-weight:600;">今天想处理什么？</h1>
+            <p style="margin:0;color:var(--text-secondary);font-size:13px;">问答、联网搜索、文件分析、定时早报都在这里完成</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+              <button class="btn btn-secondary btn-sm" onclick="quickSend('总结本周 AI 行业动态')">总结本周 AI 动态</button>
+              <button class="btn btn-secondary btn-sm" onclick="quickSend('每天早上 8 点给我发行业早报')">每天 8 点发早报</button>
+              <button class="btn btn-secondary btn-sm" onclick="quickSend('发邮件给 zhang@example.com 汇报 Q3 数据')">测试敏感操作确认</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (curBot === 'morning') {
+        s.innerHTML = `
+          <div class="summary-row">
+            <div class="summary-box">
+              <strong>每日 AI 行业早报 · 11-17 08:00 自动送达</strong>
+              <ul>
+                <li>Higress 发布 AI 网关新版本，支持多供应商故障自动摘除。</li>
+                <li>国内大模型推理成本持续下探，长上下文与工具调用成标配。</li>
+              </ul>
+            </div>
+            <div class="side-actions">
+              <span class="side-act" onclick="showToast('已点赞','success')">☺</span>
+              <span class="side-act" onclick="showToast('已重新生成','info')">↩</span>
+              <span class="side-act" onclick="showToast('已复制 · 消耗 8 积分','info')">···</span>
+            </div>
+          </div>`;
+        return;
+      }
+
+      s.innerHTML = `
+        <div class="msg-ai">
+          <!-- 结构化表格卡片（对齐截图） -->
+          <div class="clean-card">
+            <table class="tbl">
+              <tr><th>营收表现</th><td><strong>有更新：</strong>华东区 Q3 总营收 ¥4,280 万（环比 +14.2%），达成季度目标 108%。</td></tr>
+              <tr><th>城市前三</th><td><strong>上海：</strong>¥1,820 万（+18.4%）；杭州 ¥1,140 万（+12.1%）；苏州 ¥790 万（+9.6%）。</td></tr>
+              <tr><th>渠道变化</th><td><strong>无新变化：</strong>线上直销占比稳定在 62%，大客户续约率 94%。</td></tr>
+              <tr><th>交付产物</th><td>已生成 <strong>Q3 销售分析.pptx</strong> 与 <strong>华东三城对比图.png</strong>，已自动存入 Library。</td></tr>
+            </table>
+          </div>
+
+          <!-- 关键数字速览卡 + 右侧外置 3 图标（完全对齐截图） -->
+          <div class="summary-row">
+            <div class="summary-box">
+              <strong>关键数字速览</strong>
+              <ul>
+                <li><strong>华东总营收：</strong>¥4,280 万（环比 +14.2%），客单价提升 6.2%</li>
+                <li><strong>下一节点：</strong>Q4 预算评审定于 11-22 14:00，需提前准备分城目标</li>
+                <li><strong>工具执行：</strong>联网检索 2 个行业基准 + 沙箱生成对比图表与 PPT</li>
+              </ul>
+              <div style="margin-top:8px;font-size:11.5px;color:var(--text-tertiary);">生成时间：2026-11-17 10:42 · 本轮消耗 12 积分</div>
+            </div>
+            <div class="side-actions">
+              <span class="side-act" title="赞" onclick="showToast('感谢反馈','success')">☺</span>
+              <span class="side-act" title="重新生成" onclick="showToast('正在重新生成...','info')">↩</span>
+              <span class="side-act" title="更多" onclick="showToast('已复制内容 · 消耗 12 积分','info')">···</span>
+            </div>
+          </div>
+
+          <!-- 3 张并排圆角卡片（对齐截图底部） -->
+          <div class="ref-row">
+            <div class="ref-card" onclick="showToast('预览：Q3 销售分析.pptx','info')">
+              <div class="ref-title">Q3 销售分析.pptx</div>
+              <div class="ref-domain">2.4 MB · Library 产物</div>
+            </div>
+            <div class="ref-card" onclick="showToast('预览：华东三城对比图.png','info')">
+              <div class="ref-title">华东三城对比图.png</div>
+              <div class="ref-domain">图表产物 · 点击查看</div>
+            </div>
+            <div class="ref-card" onclick="showToast('打开来源：stats.gov.cn','info')">
+              <div class="ref-title">[1] 华东零售季度报告</div>
+              <div class="ref-domain">report.example.com</div>
+            </div>
+          </div>
+
+          <!-- 极轻无边框记忆提示 -->
+          ${memUndone ? `
+            <div class="mem-subtle"><span>已撤销该条记忆</span><span style="color:var(--accent-primary);cursor:pointer;" onclick="memUndone=false;renderStream()">恢复</span></div>` : `
+            <div class="mem-subtle">
+              <span>• 已记住：你在上海工作，偏好简洁回答</span>
+              <span style="display:flex;gap:10px;"><span style="color:var(--accent-primary);cursor:pointer;" onclick="openSettings()">编辑</span><span style="cursor:pointer;" onclick="memUndone=true;renderStream()">撤销</span></span>
+            </div>`}
+        </div>`;
+    }
+
+    function quickSend(txt) {
+      document.getElementById('pillInput').value = txt;
+      syncSendIcon();
+      sendMsg();
+    }
+
+    function sendMsg() {
+      const inp = document.getElementById('pillInput');
+      const val = inp.value.trim();
+      if (!val) return;
+      inp.value = '';
+      syncSendIcon();
+      if (curBot === 'empty') {
+        curBot = 'all';
+        document.getElementById('chatStream').innerHTML = '';
+      }
+      const s = document.getElementById('chatStream');
+      const u = document.createElement('div');
+      u.className = 'msg-user-row';
+      u.innerHTML = `<div class="msg-user"></div>`;
+      u.querySelector('.msg-user').textContent = val;
+      s.appendChild(u);
+
+      const cost = 3 * model.mult;
+      credits = Math.max(0, credits - cost);
+      document.getElementById('creditVal').textContent = credits;
+
+      const ai = document.createElement('div');
+      ai.className = 'msg-ai';
+      if (val.includes('邮件')) {
+        ai.innerHTML = `<div class="summary-box" style="display:flex;justify-content:space-between;align-items:center;"><div><span class="badge badge-warning" style="margin-right:8px;">需确认</span>即将发送邮件至 zhang@example.com</div><div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" onclick="this.closest('.summary-box').innerHTML='已拒绝外发邮件'">拒绝</button><button class="btn btn-primary btn-sm" onclick="this.closest('.summary-box').innerHTML='✓ 已发送邮件至 zhang@example.com';showToast('已发送','success')">允许</button></div></div>`;
+      } else if (val.includes('早报')) {
+        ai.innerHTML = `<div class="summary-box" style="display:flex;justify-content:space-between;align-items:center;"><div><span class="badge badge-accent" style="margin-right:8px;">定时任务</span>每天 08:00 推送 AI 行业早报</div><button class="btn btn-primary btn-sm" onclick="showToast('已创建定时任务','success');this.textContent='已创建 ✓';this.disabled=true;">确认创建</button></div>`;
+      } else {
+        ai.innerHTML = `
+          <div class="summary-row">
+            <div class="summary-box">已使用 <strong>${model.name}</strong> 完成回复。你可以点击左下角 <strong>⊞</strong> 打开 Library 与定时任务，或点头像管理自动记忆与积分。</div>
+            <div class="side-actions"><span class="side-act" onclick="showToast('已点赞','success')">☺</span><span class="side-act">↩</span><span class="side-act" onclick="showToast('消耗 ${cost} 积分','info')">···</span></div>
+          </div>`;
+      }
+      s.appendChild(ai);
+      const sc = document.getElementById('chatScroll');
+      sc.scrollTop = sc.scrollHeight;
+    }
+
+    function togglePlus() { document.getElementById('plusMenu').classList.toggle('open'); }
+    function closePlus() { document.getElementById('plusMenu').classList.remove('open'); }
+    function toggleAttach() { document.getElementById('attachTag').classList.toggle('hidden'); }
+    function toggleWeb() {
+      webOn = !webOn;
+      const el = document.getElementById('webState');
+      el.textContent = webOn ? '已开启' : '已关闭';
+      el.style.color = webOn ? 'var(--accent-primary)' : 'var(--text-tertiary)';
+    }
+    function setModel(name, mult) {
+      model = { name, mult };
+      document.querySelectorAll('.m-chk').forEach(el => el.textContent = el.dataset.m === name ? '✓' : '');
+      closePlus();
+      showToast(`已切换至 ${name}（×${mult}）`, 'info');
+    }
+
+    function toggleHistory() { document.getElementById('historyMask').classList.toggle('open'); }
+    function openHubModal() { openModal('hubModal'); renderHub('library', document.querySelector('#hubTabs .seg-tab')); }
+    function renderHub(tab, el) {
+      document.querySelectorAll('#hubTabs .seg-tab').forEach(t => t.classList.remove('active'));
+      if (el) el.classList.add('active');
+      const body = document.getElementById('hubBody');
+      body.innerHTML = tab === 'library'
+        ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+             <div class="summary-box"><strong>Q3 销售分析.pptx</strong><div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">2.4 MB · 今天</div></div>
+             <div class="summary-box"><strong>华东三城对比图.png</strong><div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">1280×720 · 今天</div></div>
+           </div>`
+        : `<div class="summary-box" style="display:flex;justify-content:space-between;align-items:center;">
+             <div><strong>每天 08:00 · AI 行业早报</strong><div style="font-size:12px;color:var(--text-tertiary);">站内信 + App 推送 · 运行中</div></div>
+             <button class="btn btn-secondary btn-sm" onclick="showToast('已触发立即执行','info')">立即执行</button>
+           </div>`;
+    }
+
+    function openSettings() { openModal('settingsModal'); renderSet('memory', document.querySelector('#setTabs .seg-tab')); }
+    function renderSet(tab, el) {
+      document.querySelectorAll('#setTabs .seg-tab').forEach(t => t.classList.remove('active'));
+      if (el) el.classList.add('active');
+      const body = document.getElementById('setBody');
+      if (tab === 'memory') {
+        body.innerHTML = memories.map(m => `<div class="mem-subtle" style="padding:10px 12px;background:var(--bg-surface);border-radius:10px;margin-bottom:8px;"><span style="color:var(--text-primary);font-size:13px;">${m.text}</span><span style="color:var(--color-danger);cursor:pointer;" onclick="memories=memories.filter(x=>x.id!=='${m.id}');renderSet('memory')">删除</span></div>`).join('') || '<div style="color:var(--text-tertiary);padding:16px;">暂无记忆</div>';
+      } else if (tab === 'credits') {
+        body.innerHTML = `<div class="summary-box"><strong>今日剩余积分：${credits} / 1000</strong><div style="font-size:12px;color:var(--text-tertiary);margin-top:6px;">每日 00:00 自动刷新 · 按模型倍率折算</div></div>`;
+      } else {
+        body.innerHTML = `<div class="summary-box" style="display:flex;justify-content:space-between;align-items:center;"><span>导出历史会话与记忆数据</span><button class="btn btn-secondary btn-sm" onclick="showToast('已开始导出','success')">导出</button></div>`;
+      }
+    }
+
+    function toggleMiniFloat() { document.getElementById('miniFloat').classList.toggle('open'); }
+    function sendMini() {
+      const v = document.getElementById('miniIn').value.trim() || '翻译选中营收数据';
+      document.getElementById('miniIn').value = '';
+      toggleMiniFloat();
+      quickSend(v);
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      const isLight = root.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        root.removeAttribute('data-theme');
+        showToast('已切换至深色模式', 'info');
+      } else {
+        root.setAttribute('data-theme', 'light');
+        showToast('已切换至浅色模式', 'info');
+      }
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function showToast(msg, type = 'info') {
+      const box = document.getElementById('toastBox');
+      box.innerHTML = '';
+      const t = document.createElement('div');
+      t.className = 'toast';
+      const clr = type === 'success' ? 'var(--color-success)' : type === 'warning' ? 'var(--color-warning)' : 'var(--accent-primary)';
+      t.innerHTML = `<span style="width:6px;height:6px;border-radius:999px;background:${clr};opacity:0.85;"></span><span>${msg}</span>`;
+      box.appendChild(t);
+      setTimeout(() => {
+        t.style.transition = 'opacity 0.25s, transform 0.25s';
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(-4px)';
+        setTimeout(() => t.remove(), 250);
+      }, 2200);
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.plus-btn') && !e.target.closest('#plusMenu')) closePlus();
+    });
+
+    renderStream();
+  </script>
+</body>
+</html>

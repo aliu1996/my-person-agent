@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人工作助手 · 设计规范 (Design System)</title>
+  <link rel="stylesheet" href="./tokens.css" />
+  <style>
+    .ds-wrap { max-width: 1360px; margin: 0 auto; padding: 48px 40px 80px; display: flex; flex-direction: column; gap: 32px; }
+    .ds-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    .ds-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ds-pill { padding: 4px 12px; border-radius: 999px; background: var(--bg-elevated); border: 1px solid var(--border-default); font-size: 12px; color: var(--text-secondary); }
+    .ds-title { font-size: 32px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; }
+    .ds-sub { font-size: 15px; color: var(--text-secondary); margin: 0; }
+
+    .sec { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; }
+    .sec-head { display: flex; flex-direction: column; gap: 4px; }
+    .sec-title-row { display: flex; align-items: center; gap: 10px; }
+    .sec-title { font-size: 18px; font-weight: 600; margin: 0; }
+    .sec-desc { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+    .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; }
+    .swatch-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .swatch-box { height: 42px; border-radius: 6px; border: 1px solid var(--border-strong); }
+    .swatch-name { font-size: 12px; font-weight: 500; }
+    .swatch-meta { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+
+    .sem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .sem-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .sem-top { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; }
+    .sem-dot { width: 14px; height: 14px; border-radius: 999px; flex-shrink: 0; }
+
+    .type-row { display: flex; align-items: center; gap: 24px; padding: 10px 14px; border-radius: 8px; background: var(--bg-elevated); }
+    .type-meta { width: 250px; flex-shrink: 0; }
+    .type-meta strong { display: block; font-size: 13px; }
+    .type-meta span { font-size: 12px; color: var(--text-tertiary); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .col-stack { display: flex; flex-direction: column; gap: 12px; }
+    .col-label { font-size: 12px; color: var(--text-tertiary); }
+
+    .card-box { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px 14px; }
+    .bar-left { border-left: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .accent-strip { width: 3px; height: 18px; border-radius: 2px; flex-shrink: 0; }
+
+    .input-demo { width: 100%; height: 38px; border-radius: var(--radius-md); background: var(--bg-elevated); border: 1px solid var(--border-default); padding: 0 12px; color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; }
+    .input-demo.focus { border-color: var(--accent-primary); }
+    .input-demo.error { border-color: var(--color-danger); }
+
+    .composer { background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-xl); padding: 16px 18px 14px; max-width: 780px; display: flex; flex-direction: column; gap: 14px; }
+    .composer.streaming { border-color: var(--accent-primary); }
+    .composer-bar { display: flex; justify-content: space-between; align-items: center; }
+    .pill-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border-default); font-size: 12px; color: var(--text-secondary); }
+    .pill-btn.on { background: var(--accent-subtle); border-color: var(--accent-primary); color: var(--accent-primary); }
+    .send-circle { width: 32px; height: 32px; border-radius: 999px; background: var(--btn-primary-bg); color: var(--btn-primary-text); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
+    .stop-circle { width: 32px; height: 32px; border-radius: 999px; background: var(--bg-hover); border: 1px solid var(--border-strong); color: var(--text-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+
+    .mini-chart { width: 48px; height: 40px; border-radius: 6px; background: var(--bg-surface); border: 1px solid var(--border-default); display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 6px; flex-shrink: 0; }
+    .mini-bar { width: 6px; border-radius: 2px; }
+
+    .ov-grid { display: grid; grid-template-columns: 300px 360px 210px 1fr; gap: 18px; align-items: start; }
+    .progress-track { width: 100%; height: 6px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 999px; }
+
+    @media (max-width: 1100px) {
+      .sem-grid, .two-col, .ov-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ds-wrap">
+    <div class="ds-top">
+      <div>
+        <div class="ds-tags">
+          <span class="ds-pill">Web / Electron 桌面端</span>
+          <span class="ds-pill">Grok 深色极简风</span>
+          <span class="ds-pill">Vue 3 设计令牌</span>
+          <span class="ds-pill">v2 优化版</span>
+        </div>
+        <h1 class="ds-title">个人工作助手 · 设计规范 (Design System)</h1>
+        <p class="ds-sub">深色极简 · 黑白灰为主 · 单强调色 #5B8CFF · 反色白底黑字主按钮 · 柔和深色语义色</p>
+      </div>
+      <a href="./index.html" class="btn btn-primary btn-lg" style="text-decoration:none;">打开可点击产品原型 →</a>
+    </div>
+
+    <!-- 01 色彩系统 -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">01</span><h2 class="sec-title">色彩系统 (Color Tokens)</h2></div>
+        <p class="sec-desc">语义色已优化为深色底柔和版本（#34D399 / #FBBF24 / #F87171 / #60A5FA），仅用于图标、文字、小标签与 3px 侧边竖条</p>
+      </div>
+      <div class="swatch-grid">
+        <div class="swatch-card"><div class="swatch-box" style="background:#0A0A0A"></div><div class="swatch-name">bg/base</div><div class="swatch-meta">#0A0A0A · 页面底色</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#141414"></div><div class="swatch-name">bg/surface</div><div class="swatch-meta">#141414 · 侧边栏/卡片</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#1C1C1C"></div><div class="swatch-name">bg/elevated</div><div class="swatch-meta">#1C1C1C · 输入框/浮层</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#232323"></div><div class="swatch-name">bg/hover</div><div class="swatch-meta">#232323 · 悬停态</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#262626"></div><div class="swatch-name">border/default</div><div class="swatch-meta">#262626 · 默认边框</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#5B8CFF"></div><div class="swatch-name">accent/primary</div><div class="swatch-meta">#5B8CFF · 主强调色</div></div>
+        <div class="swatch-card"><div class="swatch-box" style="background:#FAFAFA"></div><div class="swatch-name">btn/primary-bg</div><div class="swatch-meta">#FAFAFA · 反色主按钮</div></div>
+      </div>
+      <div class="sem-grid">
+        <div class="sem-card">
+          <div class="sem-top"><span class="sem-dot" style="background:var(--color-success)"></span>semantic/success · #34D399</div>
+          <div><span class="badge badge-success">任务执行成功</span></div>
+          <div class="swatch-meta">12% 浅底文字对比度已验证</div>
+        </div>
+        <div class="sem-card">
+          <div class="sem-top"><span class="sem-dot" style="background:var(--color-warning)"></span>semantic/warning · #FBBF24</div>
+          <div><span class="badge badge-warning">需要你确认</span></div>
+          <div class="swatch-meta">12% 浅底文字对比度已验证</div>
+        </div>
+        <div class="sem-card">
+          <div class="sem-top"><span class="sem-dot" style="background:var(--color-danger)"></span>semantic/danger · #F87171</div>
+          <div><span class="badge badge-danger">内容审核拦截</span></div>
+          <div class="swatch-meta">12% 浅底文字对比度已验证</div>
+        </div>
+        <div class="sem-card">
+          <div class="sem-top"><span class="sem-dot" style="background:var(--color-info)"></span>semantic/info · #60A5FA</div>
+          <div><span class="badge badge-info">正在联网搜索</span></div>
+          <div class="swatch-meta">12% 浅底文字对比度已验证</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 字体阶梯 -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">02</span><h2 class="sec-title">字体阶梯 (Typography)</h2></div>
+        <p class="sec-desc">PingFang SC / Noto Sans SC + Inter + JetBrains Mono，字重仅用 400 / 500 / 600</p>
+      </div>
+      <div class="col-stack">
+        <div class="type-row"><div class="type-meta"><strong>Display / 36 Bold</strong><span>页面主展示 · 行高 1.25</span></div><div style="font-size:32px;font-weight:700;">一个对话，完成所有工作</div></div>
+        <div class="type-row"><div class="type-meta"><strong>H2 / 24 Bold</strong><span>模块标题 · 行高 1.35</span></div><div style="font-size:24px;font-weight:700;">Library 资产库与文件中心</div></div>
+        <div class="type-row"><div class="type-meta"><strong>Chat / 15 Regular</strong><span>AI 对话正文 · 行高 1.75</span></div><div style="font-size:15px;line-height:1.75;">已为你整理本周 3 份会议纪要，并提取了 5 条待办事项。</div></div>
+        <div class="type-row"><div class="type-meta"><strong>Body / 14 Regular</strong><span>通用表单与正文 · 行高 1.6</span></div><div style="font-size:14px;">支持上传 PDF、Word、表格与图片，单文件最大 50MB。</div></div>
+        <div class="type-row"><div class="type-meta"><strong>Code / 13 Mono</strong><span>代码块 · JetBrains Mono</span></div><div style="font-size:13px;font-family:var(--font-mono);">GET /api/chat/stream/resume?sessionId=s_901</div></div>
+      </div>
+    </section>
+
+    <!-- 04 & 05 & 06 按钮、表单与对话输入框 -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">04–06</span><h2 class="sec-title">按钮、表单与对话输入框</h2></div>
+        <p class="sec-desc">白底黑字反色主按钮 + 大圆角对话输入区（默认态 & 生成中停止态）</p>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary">发送消息</button>
+        <button class="btn btn-secondary">新建对话</button>
+        <button class="btn btn-ghost">取消</button>
+        <button class="btn btn-danger">删除会话</button>
+        <button class="btn btn-secondary btn-icon">＋</button>
+        <button class="btn btn-primary is-disabled">禁用态</button>
+        <button class="btn btn-primary btn-sm">小号 28px</button>
+        <button class="btn btn-primary btn-lg">大号 40px</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+        <input class="input-demo" placeholder="默认态：请输入对话标题..." />
+        <input class="input-demo focus" value="聚焦态：Q3 销售数据分析" />
+        <input class="input-demo error" value="错误态：13800138" />
+      </div>
+      <div class="two-col">
+        <div class="composer">
+          <div style="color:var(--text-tertiary);font-size:15px;">问我任何问题，或输入 / 唤醒技能、上传文件分析...</div>
+          <div class="composer-bar">
+            <div style="display:flex;gap:8px;"><span class="pill-btn">附件</span><span class="pill-btn on">联网搜索 · 开</span></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="pill-btn">DeepSeek-R1 · ×2 ▾</span><span class="send-circle">↑</span></div>
+          </div>
+        </div>
+        <div class="composer streaming">
+          <div style="color:var(--text-secondary);font-size:15px;">正在生成回答，可随时点击右侧停止...</div>
+          <div class="composer-bar">
+            <div style="display:flex;gap:8px;"><span class="pill-btn">附件</span><span class="pill-btn on">联网搜索 · 开</span></div>
+            <div style="display:flex;gap:10px;align-items:center;"><span class="pill-btn">DeepSeek-R1 · ×2 ▾</span><span class="stop-circle">■</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 对话特殊卡片（双列优化版） -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">08</span><h2 class="sec-title">对话中的特殊卡片（双列状态对照 · 无系统 Emoji）</h2></div>
+        <p class="sec-desc">左列：默认 / 进行中态 · 右列：展开态 / 失败重试 / 已撤销 / 已处理 / 定时任务确认</p>
+      </div>
+      <div class="two-col">
+        <div class="col-stack">
+          <div class="col-label">默认 / 进行中态</div>
+          <div class="card-box" style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);"><span style="width:8px;height:8px;border-radius:999px;background:var(--accent-primary);"></span>已深度思考（用时 8 秒）</span>
+            <span style="font-size:12px;color:var(--text-tertiary);">展开 ▾</span>
+          </div>
+          <div class="card-box col-stack" style="gap:8px;">
+            <strong style="font-size:13px;">执行步骤 · 进行中 (2/3)</strong>
+            <div style="font-size:13px;color:var(--text-secondary);"><span style="color:var(--color-success);margin-right:6px;">✓</span>联网搜索：2026 Q3 华东零售行业均值</div>
+            <div style="font-size:13px;color:var(--text-secondary);"><span style="color:var(--color-success);margin-right:6px;">✓</span>读取 3 个参考网页并提取指标</div>
+            <div style="font-size:13px;color:var(--text-primary);"><span style="color:var(--accent-primary);margin-right:6px;">◌</span>正在生成可视化图表与 PPT...</div>
+          </div>
+          <div class="card-box bar-left" style="padding-left:10px;">
+            <div style="display:flex;align-items:center;gap:10px;"><span class="accent-strip" style="background:var(--accent-primary);"></span><span style="font-size:13px;">已记住：你在上海工作，偏好简洁回答</span></div>
+            <div style="display:flex;gap:10px;font-size:12px;"><span style="color:var(--accent-primary);">编辑</span><span style="color:var(--text-secondary);">撤销</span></div>
+          </div>
+          <div class="card-box col-stack" style="gap:10px;padding:16px;">
+            <div><span class="badge badge-warning">需要你确认</span></div>
+            <div style="font-size:13px;">即将代表你向 zhang@example.com 发送邮件《Q3 华东区销售分析报告》。</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--text-secondary);">☐ 本次会话总是允许发邮件</span>
+              <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">拒绝</button><button class="btn btn-primary btn-sm">允许执行</button></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="card-box" style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:40px;border-radius:6px;background:var(--bg-surface);border:1px solid var(--border-default);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent-primary);">PPT</div>
+                <div><div style="font-size:13px;">Q3 销售分析.pptx</div><div style="font-size:11px;color:var(--text-tertiary);">2.4 MB · Library</div></div>
+              </div>
+              <span style="font-size:12px;color:var(--accent-primary);">预览</span>
+            </div>
+            <div class="card-box" style="display:flex;align-items:center;gap:10px;">
+              <div class="mini-chart">
+                <div class="mini-bar" style="height:12px;background:var(--border-strong);"></div>
+                <div class="mini-bar" style="height:22px;background:var(--accent-primary);"></div>
+                <div class="mini-bar" style="height:16px;background:var(--border-strong);"></div>
+                <div class="mini-bar" style="height:26px;background:var(--accent-hover);"></div>
+              </div>
+              <div><div style="font-size:13px;">华东三城对比图.png</div><div style="font-size:11px;color:var(--text-tertiary);">点击查看大图</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-stack">
+          <div class="col-label">展开态 / 失败重试 / 已撤销 / 已处理 / 定时任务确认</div>
+          <div class="card-box col-stack" style="gap:8px;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">已深度思考（用时 8 秒）</span><span style="font-size:12px;color:var(--text-tertiary);">收起 ▴</span></div>
+            <div style="display:flex;gap:10px;padding-left:2px;">
+              <div style="width:2px;background:var(--border-strong);border-radius:1px;"></div>
+              <div style="font-size:12px;color:var(--text-tertiary);">1. 先按城市聚合营收并计算环比；2. 输出对比表后给出可直接执行的 SQL。</div>
+            </div>
+          </div>
+          <div class="card-box col-stack" style="gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong style="font-size:13px;color:var(--color-danger);">执行失败 · 步骤 2/3</strong>
+              <button class="btn btn-secondary btn-sm">重试此步</button>
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);">× 目标网页访问超时（HTTP 504），已跳过该来源。</div>
+          </div>
+          <div class="card-box" style="background:var(--bg-surface);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text-tertiary);">已撤销该条记忆，不会在后续对话中使用</span>
+            <span style="font-size:12px;color:var(--accent-primary);">恢复</span>
+          </div>
+          <div class="card-box" style="background:var(--bg-surface);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text-secondary);"><span style="color:var(--color-success);margin-right:6px;">✓</span>已允许发送邮件给 zhang@example.com</span>
+            <span style="font-size:12px;color:var(--text-tertiary);">10:42</span>
+          </div>
+          <div class="card-box col-stack" style="gap:10px;padding:16px;">
+            <div><span class="badge badge-accent">定时任务确认</span></div>
+            <strong style="font-size:14px;">每天 08:00 · 推送 AI 行业早报</strong>
+            <div style="font-size:12px;color:var(--text-secondary);">投递渠道：站内信 + App 推送 · 写入固定早报会话</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--accent-primary);">修改时间 / 渠道</span>
+              <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">取消</button><button class="btn btn-primary btn-sm">确认创建</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 浮层与弹窗（优化版） -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">10</span><h2 class="sec-title">浮层与弹窗（优化版）</h2></div>
+        <p class="sec-desc">模型能力胶囊 + 克制倍率、Modal 关闭与有效期、克制风格 Toast、会话右键菜单、快捷键 Tooltip</p>
+      </div>
+      <div class="ov-grid">
+        <div class="card-box col-stack" style="gap:6px;padding:10px;">
+          <div class="col-label">选择模型</div>
+          <div style="padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:13px;color:var(--text-secondary);">DeepSeek-V3</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="badge badge-neutral" style="font-size:11px;">工具</span><span class="badge badge-neutral" style="font-size:11px;">快速</span></div></div>
+            <span style="font-size:12px;color:var(--text-secondary);">×1</span>
+          </div>
+          <div style="padding:8px 10px;border-radius:8px;background:var(--accent-subtle);display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:13px;font-weight:500;">DeepSeek-R1</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="badge badge-neutral" style="font-size:11px;">深度思考</span><span class="badge badge-neutral" style="font-size:11px;">工具</span></div></div>
+            <span style="font-size:12px;color:var(--accent-primary);">×2 ✓</span>
+          </div>
+        </div>
+
+        <div class="card-box col-stack" style="gap:12px;padding:18px;border-radius:var(--radius-xl);border-color:var(--border-strong);">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:16px;">分享这段对话</strong><span style="color:var(--text-tertiary);">✕</span></div>
+          <div style="font-size:13px;color:var(--text-secondary);">生成公开只读链接，任何人可查看本会话快照。</div>
+          <div style="padding:8px 12px;border-radius:10px;background:var(--bg-surface);border:1px solid var(--border-default);display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--text-secondary);">链接有效期</span><span>7 天后自动失效 ▾</span>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn btn-secondary btn-sm">取消</button><button class="btn btn-primary btn-sm">创建链接</button></div>
+        </div>
+
+        <div class="card-box col-stack" style="gap:4px;padding:8px;border-color:var(--border-strong);">
+          <div style="padding:6px 10px;border-radius:6px;font-size:13px;">置顶对话</div>
+          <div style="padding:6px 10px;border-radius:6px;font-size:13px;background:var(--bg-hover);">重命名</div>
+          <div style="padding:6px 10px;border-radius:6px;font-size:13px;">分享链接</div>
+          <div style="height:1px;background:var(--border-default);margin:4px 0;"></div>
+          <div style="padding:6px 10px;border-radius:6px;font-size:13px;color:var(--color-danger);">删除对话</div>
+        </div>
+
+        <div class="col-stack" style="gap:10px;">
+          <div class="card-box" style="border-color:var(--border-strong);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;"><span style="color:var(--color-success);margin-right:8px;">✓</span>已复制分享链接</span><span style="color:var(--text-tertiary);">×</span>
+          </div>
+          <div class="card-box" style="border-color:var(--border-strong);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;"><span style="color:var(--color-warning);margin-right:8px;">!</span>网络波动，正在断点续传...</span><span style="color:var(--text-tertiary);">×</span>
+          </div>
+          <div class="card-box" style="border-color:var(--border-strong);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;"><span style="color:var(--color-danger);margin-right:8px;">✕</span>上传失败，超过 50MB</span><span style="color:var(--text-tertiary);">×</span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <span style="padding:5px 10px;border-radius:8px;background:var(--bg-base);border:1px solid var(--border-strong);font-size:12px;">新建对话 <span style="color:var(--text-tertiary);margin-left:4px;">⌘K</span></span>
+            <span style="padding:5px 10px;border-radius:8px;background:var(--bg-base);border:1px solid var(--border-strong);font-size:12px;">联网搜索 <span style="color:var(--text-tertiary);margin-left:4px;">⌘S</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 数据展示（优化版） -->
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title-row"><span class="badge badge-accent">11</span><h2 class="sec-title">数据展示（优化版）</h2></div>
+        <p class="sec-desc">头像 3 尺寸、积分胶囊（常规/预警）、2 种进度条、空状态（含引导按钮）、对话骨架屏</p>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+        <span style="width:44px;height:44px;border-radius:999px;background:var(--accent-subtle);border:1px solid var(--accent-primary);color:var(--accent-primary);display:inline-flex;align-items:center;justify-content:center;font-weight:500;">刘</span>
+        <span style="width:34px;height:34px;border-radius:999px;background:var(--accent-subtle);border:1px solid var(--accent-primary);color:var(--accent-primary);display:inline-flex;align-items:center;justify-content:center;font-size:13px;">刘</span>
+        <span style="width:24px;height:24px;border-radius:999px;background:var(--bg-elevated);border:1px solid var(--border-strong);display:inline-flex;align-items:center;justify-content:center;font-size:10px;">AI</span>
+        <span class="ds-pill" style="color:var(--text-primary);display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:999px;background:var(--accent-primary);"></span>今日剩余 860 积分</span>
+        <span class="ds-pill" style="color:var(--color-warning);display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:999px;background:var(--color-warning);"></span>仅剩 18 积分</span>
+        <span class="badge badge-accent">深度思考</span>
+        <span class="badge badge-success">定时任务 · 运行中</span>
+      </div>
+      <div class="two-col">
+        <div class="card-box col-stack" style="background:var(--bg-base);gap:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span>今日积分额度</span><span style="color:var(--text-secondary);">已用 140 / 1000</span></div>
+          <div class="progress-track"><div class="progress-fill" style="width:14%;background:var(--accent-primary);"></div></div>
+        </div>
+        <div class="card-box col-stack" style="background:var(--bg-base);gap:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span>正在生成 PPT 报告...</span><span style="color:var(--text-secondary);">65%</span></div>
+          <div class="progress-track"><div class="progress-fill" style="width:65%;background:var(--color-success);"></div></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card-box" style="background:var(--bg-base);padding:24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+          <div style="width:36px;height:28px;border-radius:6px;background:var(--bg-elevated);border:1.5px solid var(--border-strong);"></div>
+          <strong style="font-size:14px;">Library 暂无产物</strong>
+          <span style="font-size:12px;color:var(--text-tertiary);">在对话中生成图表、图片或 PPT 后会自动沉淀到这里</span>
+          <button class="btn btn-primary btn-sm" style="margin-top:4px;">去发起对话</button>
+        </div>
+        <div class="card-box col-stack" style="background:var(--bg-base);padding:24px;gap:12px;">
+          <div class="col-label">对话骨架屏 (Skeleton)</div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:999px;background:var(--bg-elevated);flex-shrink:0;"></div>
+            <div class="col-stack" style="gap:8px;flex:1;">
+              <div style="height:12px;width:85%;border-radius:6px;background:var(--bg-elevated);"></div>
+              <div style="height:12px;width:65%;border-radius:6px;background:var(--bg-elevated);"></div>
+              <div style="height:12px;width:45%;border-radius:6px;background:var(--bg-elevated);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

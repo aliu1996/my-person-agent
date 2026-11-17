@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pa-postgres
+    environment:
+      POSTGRES_USER: pa
+      POSTGRES_PASSWORD: pa_dev
+      POSTGRES_DB: personal_assistant
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pa -d personal_assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: pa-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  s3:
+    image: rustfs/rustfs:latest
+    container_name: pa-s3
+    environment:
+      RUSTFS_ACCESS_KEY: minioadmin
+      RUSTFS_SECRET_KEY: minioadmin
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - s3_data:/data
+
+  higress:
+    image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/all-in-one:latest
+    container_name: pa-higress
+    ports:
+      - "8080:8080"
+      - "8001:8001"
+      - "8443:8443"
+    volumes:
+      - higress_data:/data
+
+volumes:
+  pg_data:
+  redis_data:
+  s3_data:
+  higress_data:

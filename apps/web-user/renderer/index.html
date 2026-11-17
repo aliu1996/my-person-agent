@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>24小时个人助理</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail" aria-label="导航">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>24小时个人助理</span></div>
+      <button class="nav-button active" id="chatNav" type="button"><span class="chat-icon" aria-hidden="true"></span>对话</button>
+      <button class="nav-button" id="platformNav" type="button">平台对话</button>
+      <button class="nav-button settings-nav" id="settingsNav" type="button"><span class="settings-icon" aria-hidden="true">⚙</span>设置</button>
+    </aside>
+    <main class="workspace">
+      <header class="toolbar">
+        <h1>对话</h1>
+        <div class="toolbar-actions">
+          <select id="modelSelect" aria-label="当前模型" disabled>
+            <option value="">选择模型</option>
+          </select>
+          <button class="secondary" id="newChat" type="button" disabled>新对话</button>
+        </div>
+      </header>
+      <section id="conversation" class="conversation" aria-label="对话消息" aria-live="polite">
+        <div id="empty" class="empty">
+          <div class="empty-mark" aria-hidden="true"></div>
+          <h2 id="emptyTitle">你想聊些什么？</h2>
+          <p id="emptyHint"></p>
+          <button class="primary" id="emptySettings" type="button" hidden>添加模型</button>
+        </div>
+        <div id="messages" class="messages"></div>
+      </section>
+      <footer class="chat-footer">
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="prompt">输入消息</label>
+          <textarea id="prompt" placeholder="输入消息…" maxlength="12000" rows="2" disabled></textarea>
+          <button class="primary send" id="send" type="submit" disabled>发送</button>
+        </form>
+        <p id="chatStatus" class="status" role="status"></p>
+      </footer>
+    </main>
+  </div>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-shell">
+      <header class="dialog-header">
+        <div class="breadcrumb"><span>设置</span><span aria-hidden="true">/</span><h2 id="settingsTitle">模型</h2></div>
+        <button class="button-icon" id="closeSettings" type="button" aria-label="关闭设置">×</button>
+      </header>
+      <div class="settings-content">
+        <aside class="providers" aria-label="供应商">
+          <h3>供应商</h3>
+          <ul id="providerList" class="provider-list"></ul>
+          <button class="secondary add-provider" id="addProvider" type="button">＋ 添加供应商</button>
+        </aside>
+        <div class="settings-panel" id="settingsPanel">
+          <section class="settings-section" aria-labelledby="providerTitle">
+            <h3 id="providerTitle">添加供应商</h3>
+            <p class="section-desc">填写兼容 OpenAI 接口的地址。API Key 加密保存在本机。</p>
+            <form id="providerForm">
+              <fieldset id="providerFields">
+                <div class="field">
+                  <label for="providerName">名称</label>
+                  <input id="providerName" maxlength="80" placeholder="例如 DeepSeek 或本机 Ollama" required>
+                </div>
+                <div class="field">
+                  <label for="baseUrl">API 根地址</label>
+                  <input id="baseUrl" type="url" maxlength="2048" placeholder="https://api.example.com/v1" required>
+                </div>
+                <div class="field">
+                  <label for="apiKey">API Key <span class="muted" id="keyStatus"></span></label>
+                  <input id="apiKey" type="password" maxlength="4096" autocomplete="off" placeholder="按供应商要求填写">
+                  <label class="checkbox-row" id="clearKeyRow" hidden>
+                    <input id="clearKey" type="checkbox">清除已保存的 Key
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button class="primary" type="submit">保存供应商</button>
+                  <button class="text-button danger" id="deleteProvider" type="button" hidden>删除供应商</button>
+                </div>
+              </fieldset>
+            </form>
+            <p class="status" role="status" id="providerStatus"></p>
+          </section>
+          <section class="settings-section models-section" id="modelsSection" aria-labelledby="modelsTitle" hidden>
+            <div class="section-header">
+              <h3 id="modelsTitle">模型</h3>
+              <button class="secondary" id="fetchModels" type="button">获取模型列表</button>
+            </div>
+            <ul id="configuredModels" class="configured-models"></ul>
+            <form id="modelForm">
+              <fieldset id="modelFields">
+                <div class="field" id="discoveredRow" hidden>
+                  <label for="discoveredModels">供应商返回的模型</label>
+                  <select id="discoveredModels"></select>
+                </div>
+                <div class="model-inputs">
+                  <div class="field">
+                    <label for="modelCode">模型 ID</label>
+                    <input id="modelCode" maxlength="200" placeholder="例如 deepseek-chat" required>
+                  </div>
+                  <div class="field">
+                    <label for="modelName">显示名称 <span class="muted">选填</span></label>
+                    <input id="modelName" maxlength="80" placeholder="例如 DeepSeek Chat">
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="primary" id="saveModel" type="submit">添加模型</button>
+                  <button class="secondary" id="cancelModelEdit" type="button" hidden>取消编辑</button>
+                </div>
+              </fieldset>
+            </form>
+            <p class="status" role="status" id="modelStatus"></p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>
